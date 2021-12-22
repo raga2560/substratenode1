@@ -3875,7 +3875,7 @@ dependencies = [
 
 [[package]]
 name = "pallet-template"
-version = "3.0.0-monthly-2021-10"
+version = "3.0.0"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
