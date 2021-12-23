@@ -11,12 +11,14 @@ pub use orml_nft;
 pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+    use frame_support::traits::Currency;
 	use sp_std::vec::Vec; // Step 3.1 will include this in `Cargo.toml`
 
 	#[pallet::config]  // <-- Step 2. code block will replace this.
 	pub trait Config: frame_system::Config    {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+        type LocalLooseCurrency: Currency<Self::AccountId>;
 
 
 	}
@@ -222,6 +224,8 @@ pub mod pallet {
 			// This function will return an error if the extrinsic is not signed.
 			// https://docs.substrate.io/v3/runtime/origins
 			let sender = ensure_signed(origin)?;
+
+            let _total_balance = T::LocalLooseCurrency::total_issuance();
 
 			// Verify that the specified proof has been claimed.
 			ensure!(Proofs::<T>::contains_key(&proof), Error::<T>::NoSuchProof);

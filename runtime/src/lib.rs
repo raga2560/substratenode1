@@ -48,6 +48,8 @@ pub use sp_runtime::{Perbill, Permill};
 
 /// Import the template pallet.
 pub use pallet_template;
+pub use pallet_loose;
+// pub use pallet_tight;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -361,6 +363,11 @@ impl pallet_template::Config for Runtime {
 //    type NonFungibleTokenModule = NonFungibleTokenModule;
 }
 
+impl pallet_loose::Config for Runtime {
+	type Event = Event;
+    type LocalLooseCurrency = Balances;
+//    type NonFungibleTokenModule = NonFungibleTokenModule;
+}
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
@@ -383,6 +390,7 @@ construct_runtime!(
 		// Include the custom logic from the pallet-template in the runtime.
 //		Tokens: orml_tokens::{Module,  Storage, Event<T>, Config<T>},
 		TemplateModule: pallet_template::{Pallet, Call, Storage, Event<T>},
+		LooseTemplateModule: pallet_loose::{Pallet, Call, Storage, Event<T>},
 	}
 );
 

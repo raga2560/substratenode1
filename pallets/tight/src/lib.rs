@@ -14,7 +14,7 @@ pub mod pallet {
 	use sp_std::vec::Vec; // Step 3.1 will include this in `Cargo.toml`
 
 	#[pallet::config]  // <-- Step 2. code block will replace this.
-	pub trait Config: frame_system::Config    {
+	pub trait Config: frame_system::Config + pallet_balances::Config    {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -222,6 +222,9 @@ pub mod pallet {
 			// This function will return an error if the extrinsic is not signed.
 			// https://docs.substrate.io/v3/runtime/origins
 			let sender = ensure_signed(origin)?;
+
+            let _total_balance = pallet_balances::Pallet::<T>::total_issuance();
+
 
 			// Verify that the specified proof has been claimed.
 			ensure!(Proofs::<T>::contains_key(&proof), Error::<T>::NoSuchProof);
