@@ -8,6 +8,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use codec::{Decode, Encode};
 
+pub use orml_nft;
 
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
@@ -256,6 +257,22 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 parameter_types! {
+    pub const MaxClassMetadata: u32 = 1;
+    pub const MaxTokenMetadata: u32 = 1;
+}
+
+impl orml_nft::Config for Runtime {
+    type ClassId = u64;
+    type TokenId = u64;
+    type ClassData = ();
+    type TokenData = ();
+    type MaxClassMetadata = MaxClassMetadata;
+    type MaxTokenMetadata = MaxTokenMetadata;
+}
+
+
+
+parameter_types! {
 	pub const ExistentialDeposit: u128 = 500;
 	pub const MaxLocks: u32 = 50;
 }
@@ -341,6 +358,7 @@ impl pallet_sudo::Config for Runtime {
 /// Configure the pallet-template in pallets/template.
 impl pallet_template::Config for Runtime {
 	type Event = Event;
+//    type NonFungibleTokenModule = NonFungibleTokenModule;
 }
 
 
@@ -360,6 +378,8 @@ construct_runtime!(
         Nicks: pallet_nicks::{Pallet, Call, Storage, Event<T>},
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
+        NonFungibleTokenModule: orml_nft::{Pallet, Call,   Storage,  Config<T>},
+
 		// Include the custom logic from the pallet-template in the runtime.
 //		Tokens: orml_tokens::{Module,  Storage, Event<T>, Config<T>},
 		TemplateModule: pallet_template::{Pallet, Call, Storage, Event<T>},

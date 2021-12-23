@@ -1,5 +1,5 @@
 [package]
-name = 'pallet-template'
+name = 'pallet-tight'
 version = '3.0.0'
 description = 'FRAME pallet template for defining custom runtime logic.'
 authors = ['Substrate DevHub <https://github.com/substrate-developer-hub>']
