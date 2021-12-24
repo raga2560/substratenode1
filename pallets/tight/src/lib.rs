@@ -3,7 +3,6 @@
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
 
-pub use orml_nft;
 
 
 
@@ -14,7 +13,7 @@ pub mod pallet {
 	use sp_std::vec::Vec; // Step 3.1 will include this in `Cargo.toml`
 
 	#[pallet::config]  // <-- Step 2. code block will replace this.
-	pub trait Config: frame_system::Config + pallet_balances::Config    {
+	pub trait Config: frame_system::Config + pallet_balances::Config + orml_nft::Config    {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -244,14 +243,14 @@ pub mod pallet {
 			Ok(())
 		}
 
-/*
+
 		#[pallet::weight(20_000)]
 		pub fn create_nft(origin  : OriginFor<T>, 
                     metadata: Vec<u8> , 
                     data: () ) -> DispatchResult{
 
 			let who = ensure_signed(origin)?;
-			let res = <orml_nft::Pallet<T>>::create_class(&who,metadata.clone(),data);
+			let res = orml_nft::Pallet<T>::create_class(&who,metadata.clone(),data);
 			//NftClassId::<T>::insert(&who, (&who, &metadata ));
 			//NftTokenMetaData::<T>::insert(&who, (&who, metadata.clone()));
 			// <NftClassId<T>>::insert(&who,res.unwrap());
@@ -259,7 +258,7 @@ pub mod pallet {
 			Self::deposit_event(Event::TokenIssuedBy(who));
 			Ok(())
 		}
-*/
+
 
 /*
 #[weight = 10_000 + T::DbWeight::get().writes(1)]

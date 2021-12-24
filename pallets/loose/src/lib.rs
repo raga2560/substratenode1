@@ -19,6 +19,7 @@ pub mod pallet {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type LocalLooseCurrency: Currency<Self::AccountId>;
+        type Looseormlnft: orml_nft::Config;
 
 
 	}
@@ -245,14 +246,14 @@ pub mod pallet {
 			Ok(())
 		}
 
-/*
+
 		#[pallet::weight(20_000)]
 		pub fn create_nft(origin  : OriginFor<T>, 
                     metadata: Vec<u8> , 
                     data: () ) -> DispatchResult{
 
 			let who = ensure_signed(origin)?;
-			let res = <orml_nft::Pallet<T>>::create_class(&who,metadata.clone(),data);
+			let res =  orml_nft::Pallet<T>::create_class(&who,metadata.clone(),data);
 			//NftClassId::<T>::insert(&who, (&who, &metadata ));
 			//NftTokenMetaData::<T>::insert(&who, (&who, metadata.clone()));
 			// <NftClassId<T>>::insert(&who,res.unwrap());
@@ -260,7 +261,7 @@ pub mod pallet {
 			Self::deposit_event(Event::TokenIssuedBy(who));
 			Ok(())
 		}
-*/
+
 
 /*
 #[weight = 10_000 + T::DbWeight::get().writes(1)]

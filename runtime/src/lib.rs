@@ -366,7 +366,7 @@ impl pallet_template::Config for Runtime {
 impl pallet_loose::Config for Runtime {
 	type Event = Event;
     type LocalLooseCurrency = Balances;
-//    type NonFungibleTokenModule = NonFungibleTokenModule;
+    type Looseormlnft = orml_nft::Pallet;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
