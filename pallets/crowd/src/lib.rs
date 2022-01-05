@@ -1,6 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-// Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
 
 pub use orml_nft;
@@ -12,19 +11,35 @@ pub use orml_nft;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::pallet_prelude::*;
-	use frame_system::pallet_prelude::*;
+    use frame_support::{pallet_prelude::*, PalletId, ensure, storage::child,
+	//	traits::{Currency, ExistenceRequirement, Get, ReservableCurrency, WithdrawReasons},
+    traits::{	Currency, LockIdentifier, LockableCurrency, WithdrawReasons },
+		sp_runtime::{traits::{AccountIdConversion, Saturating, Zero, Hash},
+         }
+	};
+	 use frame_system::{pallet_prelude::*, ensure_signed};
+
+	//use frame_support::pallet_prelude::*;
+	//use frame_system::pallet_prelude::*;
 	use sp_std::vec::Vec; // Step 3.1 will include this in `Cargo.toml`
-    use sp_std::vec;
+    const EXAMPLE_ID: LockIdentifier = *b"example ";
+
 
 	#[pallet::config]  // <-- Step 2. code block will replace this.
 	pub trait Config: frame_system::Config    {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
-//       type Balance: u128;
+        type StakeCurrency: LockableCurrency<Self::AccountId, Moment = Self::BlockNumber>;
+    //    type Currency: ReservableCurrency<Self::AccountId>;
+    //type SubmissionDeposit: Get<BalanceOf<Self>>;
+    //type MinContribution: Get<BalanceOf<Self>>;
+    //type RetirementPeriod: Get<Self::BlockNumber>;
 
 	}
 
+/*    type BalanceOf<T> =
+        <<T as Config>::StakeCurrency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+*/
 
 	#[pallet::event]   // <-- Step 3. code block will replace this.
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -35,7 +50,6 @@ pub mod pallet {
 		ClaimRevoked(T::AccountId, Vec<u8>),
 
 		UpdateCreated(T::AccountId, Vec<u8>),
-		LoginSuccess(T::AccountId, Vec<u8>),
 
 		ClaimLocked(T::AccountId, Vec<u8>),
 
@@ -62,6 +76,21 @@ pub mod pallet {
 		InvalidLock,
 	}
 
+    #[derive(Encode, Decode, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "std", derive(Debug))]
+pub struct FundInfo<AccountId, Balance, BlockNumber> {
+    /// The account that will recieve the funds if the campaign is successful.
+    beneficiary: AccountId,
+    /// The amount of deposit placed.
+    deposit: Balance,
+    /// The total amount raised.
+    raised: Balance,
+    /// Block number after which funding must have succeeded.
+    end: BlockNumber,
+    /// Upper bound on `raised`.
+    goal: Balance,
+}
+
     #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default)]
 pub struct MetaData<AccountId, Balance> {
     issuance: Balance,
@@ -69,6 +98,13 @@ pub struct MetaData<AccountId, Balance> {
     burner: AccountId,
     }
 
+/*
+pub type FundIndex = u32;
+type AccountIdOf<T> = <T as frame_system::Config>::AccountId;
+type BalanceOf<T> = <<T as Config>::Currency as Currency<AccountIdOf<T>>>::Balance;
+type FundInfoOf<T> = FundInfo<AccountIdOf<T>, BalanceOf<T>, <T as frame_system::Config>::BlockNumber>;
+
+*/
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(_);
@@ -133,20 +169,6 @@ pub(super) type MetaDataStore<T: Config> = StorageValue<_, MetaData<T::AccountId
 
 			Ok(())
 		}
-
-		#[pallet::weight(1_000)]
-		pub fn login(
-			origin: OriginFor<T>,
-			proof: Vec<u8>,
-		) -> DispatchResult  {
-			// Check that the extrinsic was signed and get the signer.
-			let sender = ensure_signed(origin)?;
-            let _sess = vec![240, 159, 146, 150];
-			Self::deposit_event(Event::LoginSuccess(sender, _sess));
-
-			Ok(())
-		}
-
 
 		#[pallet::weight(1_000)]
 		pub fn update_claim(

@@ -31,8 +31,9 @@ use sp_version::RuntimeVersion;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
-	construct_runtime, parameter_types,
-	traits::{KeyOwnerProofSystem, Randomness, StorageInfo},
+	construct_runtime, parameter_types, 
+	traits::{KeyOwnerProofSystem, Randomness, StorageInfo, 
+        Currency, ExistenceRequirement, Get, ReservableCurrency, WithdrawReasons},
 	weights::{
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
 		IdentityFee, Weight,
@@ -212,6 +213,7 @@ impl frame_system::Config for Runtime {
 	type SS58Prefix = SS58Prefix;
 	/// The set code logic, just the default since we're not a parachain.
 	type OnSetCode = ();
+
 }
 
 impl pallet_randomness_collective_flip::Config for Runtime {}
@@ -361,12 +363,42 @@ impl pallet_sudo::Config for Runtime {
 impl pallet_template::Config for Runtime {
 	type Event = Event;
 //    type NonFungibleTokenModule = NonFungibleTokenModule;
+    //type Balance = Balance;
+}
+
+parameter_types! {
+	// One can owned at most 9,999 Kitties
+	pub const MaxKittyOwned: u32 = 9999;
+}
+
+/// Configure the pallet-kitties in pallets/kitties.
+impl pallet_kitty::Config for Runtime {
+	type Event = Event;
+	type Currency = Balances;
+	type KittyRandomness = RandomnessCollectiveFlip;
+	type MaxKittyOwned = MaxKittyOwned;
+}
+
+
+parameter_types! {
+    pub const  SubmissionDeposit: u128 = 100;              
+    pub const  MinContribution: u128 = 100;              
+    pub const  RetirementPeriod: u128 = 100;              
+}
+
+impl pallet_crowd::Config for Runtime {
+	type Event = Event;
+	type StakeCurrency = Balances;
+//    type Currency: ReservableCurrency<Self::AccountId>;
+    //type SubmissionDeposit: SubmissionDeposit;
+    //type MinContribution: MinContribution;
+    //type RetirementPeriod: RetirementPeriod;
 }
 
 impl pallet_loose::Config for Runtime {
 	type Event = Event;
     type LocalLooseCurrency = Balances;
-    type Looseormlnft = orml_nft::Pallet;
+//    type Looseormlnft = orml_nft::Pallet;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -390,7 +422,9 @@ construct_runtime!(
 		// Include the custom logic from the pallet-template in the runtime.
 //		Tokens: orml_tokens::{Module,  Storage, Event<T>, Config<T>},
 		TemplateModule: pallet_template::{Pallet, Call, Storage, Event<T>},
-		LooseTemplateModule: pallet_loose::{Pallet, Call, Storage, Event<T>},
+		CrowdModule: pallet_crowd::{Pallet, Call, Storage, Event<T>},
+        LooseTemplateModule: pallet_loose::{Pallet, Call, Storage, Event<T>},
+		subkitty: pallet_kitty::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
