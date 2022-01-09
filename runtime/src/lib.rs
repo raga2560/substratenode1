@@ -367,7 +367,7 @@ parameter_types! {
     pub const FieldDeposit: u64 = 10;
     pub const SubAccountDeposit: u64 = 10;
     pub const MaxSubAccounts: u32 = 2;
-    pub const MaxAdditionalFields: u32 = 2;
+    pub const MaxAdditionalFields: u32 = 5; 
     pub const MaxRegistrars: u32 = 20;
 }
 ord_parameter_types! {

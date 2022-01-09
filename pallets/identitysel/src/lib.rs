@@ -986,8 +986,44 @@ pub mod pallet {
 			});
 			Ok(())
 		}
+
+
+
+
+///  email
+///  phone
+///  passwordhash
+///  smshash
+///  emailhash
+///
+///
+///
+		pub fn create_user(origin: OriginFor<T>,
+                           email: Vec<u8>,
+                           password: Vec<u8> ) -> DispatchResult {
+        }
+
+		pub fn smsverify_user(origin: OriginFor<T>,
+                           email: Vec<u8>,
+                           password: Vec<u8> ) -> DispatchResult {
+        }
+
+		pub fn emailverify_user(origin: OriginFor<T>,
+                           email: Vec<u8>,
+                           password: Vec<u8> ) -> DispatchResult {
+        }
+
+		pub fn login_user(origin: OriginFor<T>,
+                           email: Vec<u8>,
+                           password: Vec<u8> ) -> DispatchResult {
+        }
+        
+        
 	}
 }
+
+
+
 
 impl<T: Config> Pallet<T> {
 	/// Get the subs of an account.
@@ -998,4 +1034,36 @@ impl<T: Config> Pallet<T> {
 			.filter_map(|a| SuperOf::<T>::get(&a).map(|x| (a, x.1)))
 			.collect()
 	}
+
+
+    fn ten() -> IdentityInfo<MaxAdditionalFields> {
+	IdentityInfo {
+		display: Data::Raw(b"ten".to_vec().try_into().unwrap()),
+		legal: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+		..Default::default()
+	}
+}
+
+   fn addemailentry() ->  IdentityInfo<MaxAdditionalFields> {
+
+   Identity::set_identity(
+			Origin::signed(10),
+			Box::new(IdentityInfo {
+				additional: vec![
+					(
+						Data::Raw(b"number".to_vec().try_into().unwrap()),
+						Data::Raw(10u32.encode().try_into().unwrap())
+					),
+					(
+						Data::Raw(b"text".to_vec().try_into().unwrap()),
+						Data::Raw(b"10".to_vec().try_into().unwrap())
+					),
+				]
+				.try_into()
+				.unwrap(),
+				..Default::default()
+			})
+		));
+  }
+
 }
