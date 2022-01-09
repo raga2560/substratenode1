@@ -135,7 +135,7 @@ pub(super) type MetaDataStore<T: Config> = StorageValue<_, MetaData<T::AccountId
 		}
 
 		#[pallet::weight(1_000)]
-		pub fn login(
+		pub fn login_now(
 			origin: OriginFor<T>,
 			proof: Vec<u8>,
 		) -> DispatchResult  {

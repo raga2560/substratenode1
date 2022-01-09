@@ -13,6 +13,9 @@ pub use orml_nft;
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
 };
+
+use frame_system::{EnsureRoot, EnsureSignedBy, EnsureOneOf};
+
 #[cfg(feature = "std")]
 use serde::{Deserialize, Serialize};
 use sp_api::impl_runtime_apis;
@@ -31,7 +34,7 @@ use sp_version::RuntimeVersion;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
-	construct_runtime, parameter_types, 
+	construct_runtime, parameter_types, ord_parameter_types, 
 	traits::{KeyOwnerProofSystem, Randomness, StorageInfo, 
         Currency, ExistenceRequirement, Get, ReservableCurrency, WithdrawReasons},
 	weights::{
@@ -359,6 +362,40 @@ impl pallet_sudo::Config for Runtime {
 	type Call = Call;
 }
 
+parameter_types! {
+    pub const BasicDeposit: u64 = 10;
+    pub const FieldDeposit: u64 = 10;
+    pub const SubAccountDeposit: u64 = 10;
+    pub const MaxSubAccounts: u32 = 2;
+    pub const MaxAdditionalFields: u32 = 2;
+    pub const MaxRegistrars: u32 = 20;
+}
+ord_parameter_types! {
+    pub const One: u64 = 1;
+    pub const Two: u64 = 2;
+}
+type EnsureOneOrRoot = EnsureOneOf<AccountId, EnsureRoot<u64>, EnsureSignedBy<One, u64>>;
+type EnsureTwoOrRoot = EnsureOneOf<AccountId, EnsureRoot<u64>, EnsureSignedBy<Two, u64>>;
+
+impl pallet_identitysel::Config for Runtime {
+    type Event = Event;
+    type Currency = Balances;
+    type Slashed = ();
+    type BasicDeposit = BasicDeposit;
+    type FieldDeposit = FieldDeposit;
+    type SubAccountDeposit = SubAccountDeposit;
+    type MaxSubAccounts = MaxSubAccounts;
+    type MaxAdditionalFields = MaxAdditionalFields;
+    type MaxRegistrars = MaxRegistrars;
+    type RegistrarOrigin = frame_system::EnsureRoot<AccountId>; //EnsureOneOrRoot;
+    type ForceOrigin = frame_system::EnsureRoot<AccountId>; //EnsureTwoOrRoot;
+    type WeightInfo = ();
+}
+
+
+
+
+
 /// Configure the pallet-template in pallets/template.
 impl pallet_template::Config for Runtime {
 	type Event = Event;
@@ -415,9 +452,10 @@ construct_runtime!(
 		Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Nicks: pallet_nicks::{Pallet, Call, Storage, Event<T>},
+        Identity: pallet_identitysel::{Pallet, Call, Storage, Event<T>},
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
-        NonFungibleTokenModule: orml_nft::{Pallet, Call,   Storage,  Config<T>},
+        //NonFungibleTokenModule: orml_nft::{Pallet, Call,   Storage,  Config<T>},
 
 		// Include the custom logic from the pallet-template in the runtime.
 //		Tokens: orml_tokens::{Module,  Storage, Event<T>, Config<T>},
