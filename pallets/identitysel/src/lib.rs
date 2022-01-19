@@ -86,6 +86,7 @@ use sp_runtime::traits::{AppendZerosInput, Saturating,
         Member,
     StaticLookup, Zero};
 use sp_std::prelude::*;
+
 pub use weights::WeightInfo;
 use sp_std::{
     fmt::Debug,
@@ -104,7 +105,7 @@ type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
 	<T as frame_system::Config>::AccountId,
 >>::NegativeImbalance;
 
-
+pub type UseridentityIndex = u32;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -148,6 +149,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxRegistrars: Get<u32>;
 
+		type MaxUseridentities: Get<u32>;
 		/// What to do with slashed funds.
 		type Slashed: OnUnbalanced<NegativeImbalanceOf<Self>>;
 
@@ -169,7 +171,6 @@ pub mod pallet {
 	#[pallet::generate_store(pub(super) trait Store)]
     #[pallet::generate_storage_info]
 	pub struct Pallet<T>(_);
-    ///
 
 
 
@@ -183,6 +184,16 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		T::AccountId,
+		Registration<BalanceOf<T>, T::MaxRegistrars, T::MaxAdditionalFields>,
+		OptionQuery,
+	>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn identity1)]
+	pub(super) type Identity1Of<T: Config> = StorageMap<
+		_,
+		Twox64Concat,
+		BoundedVec<u8, T::MaxAdditionalFields> ,
 		Registration<BalanceOf<T>, T::MaxRegistrars, T::MaxAdditionalFields>,
 		OptionQuery,
 	>;
@@ -221,10 +232,24 @@ pub mod pallet {
 		ValueQuery,
 	>;
 
+
+	#[pallet::storage]
+	#[pallet::getter(fn useridentities)]
+	pub(super) type Useridentities<T: Config> = StorageValue<
+		_,
+		BoundedVec<Option  <IdentityInfo<T::MaxAdditionalFields>>, T::MaxUseridentities>,
+		ValueQuery,
+	>;
+
+
+
+
 	#[pallet::error]
 	pub enum Error<T> {
 		/// Too many subs-accounts.
 		TooManySubAccounts,
+
+		TooManyUseridentities,
 		/// Account isn't found.
 		NotFound,
 		/// Account isn't named.
@@ -261,6 +286,22 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// A name was set or reset (which will remove all judgements).
+		UserRegistered { who: Vec<u8>      },
+		UserExists { who: Vec<u8>      },
+		UserInvalid { who: Vec<u8>      },
+		UserRegisterfailed { who: Vec<u8>      },
+
+		UserWeb3registered { who: Vec<u8>      },
+		UserWeb3registerfailed { who: Vec<u8>      },
+
+		UserLoginsuccess { who: Vec<u8>, blocksession: Vec<u8>      },
+		UserLoginfailed { who: Vec<u8>      },
+		UserDoesnotexist { who: Vec<u8>      },
+
+		UserWeb3loginsuccess { who: Vec<u8>, blocksession: Vec<u8>      },
+		UserWeb3loginfailed { who: Vec<u8>      },
+		UserWeb3doesnotexist { who: Vec<u8>      },
+
 		IdentitySet { who: T::AccountId },
 		/// A name was cleared, and the given balance returned.
 		IdentityCleared { who: T::AccountId, deposit: BalanceOf<T> },
@@ -272,6 +313,10 @@ pub mod pallet {
 		JudgementUnrequested { who: T::AccountId, registrar_index: RegistrarIndex },
 		/// A judgement was given by a registrar.
 		JudgementGiven { target: T::AccountId, registrar_index: RegistrarIndex },
+        
+		/// A useridentity was added.
+		UseridentityAdded { useridentity_index: UseridentityIndex },
+
 		/// A registrar was added.
 		RegistrarAdded { registrar_index: RegistrarIndex },
 		/// A sub-identity was added to an identity and the deposit paid.
@@ -286,6 +331,117 @@ pub mod pallet {
 	#[pallet::call]
 	/// Identity pallet declaration.
 	impl<T: Config> Pallet<T> {
+
+
+		#[pallet::weight(T::WeightInfo::add_registrar(T::MaxRegistrars::get()))]
+		pub fn user_register(
+			origin: OriginFor<T>,
+			email: Vec<u8>,     
+			password: Vec<u8>,     
+		) -> DispatchResult {
+
+            let testuser1 = b"user1@alpha.com";
+
+            let e1 : Vec<u8> = testuser1.to_vec().try_into().unwrap();
+
+            if e1 == email {
+			  Self::deposit_event(Event::UserRegistered { who: e1.clone() });
+//            } else if password == b"test" {
+
+//			  Self::deposit_event(Event::UserExists { who: e1.clone() });
+
+            } else {
+
+			  Self::deposit_event(Event::UserRegisterfailed { who: email.clone() });
+
+            }
+
+            Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::add_registrar(T::MaxRegistrars::get()))]
+		pub fn user_loginallow(
+			origin: OriginFor<T>,
+			email: Vec<u8>,     
+			password: Vec<u8>,     
+		) -> DispatchResult {
+
+            let testuser1 = b"user1@alpha.com";
+
+            let e1 : Vec<u8> = testuser1.to_vec().try_into().unwrap();
+
+            let testuser1session = b"user1session0566".to_vec().try_into().unwrap();
+
+            if e1 == email {
+			  Self::deposit_event(Event::UserLoginsuccess { who: e1.clone(), blocksession: testuser1session });
+            } else if password == b"test" {
+
+			  Self::deposit_event(Event::UserLoginfailed { who: e1.clone() });
+
+            } else {
+
+			  Self::deposit_event(Event::UserDoesnotexist { who: e1.clone() });
+
+            }
+
+            Ok(())
+		}
+
+
+
+		#[pallet::weight(T::WeightInfo::add_registrar(T::MaxRegistrars::get()))]
+		pub fn user_web3register(
+			origin: OriginFor<T>,
+			email: Vec<u8>,     
+			reference: Vec<u8>,     
+		) -> DispatchResult {
+
+            let sender = ensure_signed(origin);
+            let testuser1 = b"user1@alpha.com";
+
+            let e1 : Vec<u8> = testuser1.to_vec().try_into().unwrap();
+
+            if e1 == email {
+			  Self::deposit_event(Event::UserWeb3registered { who: e1.clone() });
+            } else {
+
+			  Self::deposit_event(Event::UserWeb3registerfailed { who: e1.clone() });
+
+            }
+
+
+            Ok(())
+		}
+
+		#[pallet::weight(T::WeightInfo::add_registrar(T::MaxRegistrars::get()))]
+		pub fn user_web3loginallow(
+			origin: OriginFor<T>,
+			email: Vec<u8>,     
+		) -> DispatchResult {
+
+            let sender = ensure_signed(origin);
+
+            let testuser1 = b"user1@alpha.com";
+
+            let e1 : Vec<u8> = testuser1.to_vec().try_into().unwrap();
+
+            let testuser1session = b"user1session0566".to_vec().try_into().unwrap();
+
+            if e1 == email {
+			  Self::deposit_event(Event::UserWeb3doesnotexist { who: e1.clone() });
+            } else if email == b"test" {
+
+			  Self::deposit_event(Event::UserWeb3loginfailed { who: e1.clone() });
+
+            } else {
+
+			  Self::deposit_event(Event::UserWeb3loginsuccess { who: e1.clone(), blocksession: testuser1session });
+
+            }
+
+            Ok(())
+		}
+
 		/// Add a registrar to the system.
 		///
 		/// The dispatch origin for this call must be `T::RegistrarOrigin`.
@@ -323,6 +479,63 @@ pub mod pallet {
 
 			Ok(Some(T::WeightInfo::add_registrar(registrar_count as u32)).into())
 		}
+
+
+		#[pallet::weight(T::WeightInfo::add_useridentity(T::MaxRegistrars::get()))]
+		pub fn add_useridentity_tmp(
+			origin: OriginFor<T>,
+			email: Vec<u8>,     
+			password: Vec<u8>,     
+		) -> DispatchResultWithPostInfo {
+			T::RegistrarOrigin::ensure_origin(origin)?;
+
+
+// let data = vec![0; 32];
+// let data1: Data = Data::Raw(data.try_into().unwrap());
+
+        let add: BoundedVec<_, T::MaxAdditionalFields> = vec![
+                    (
+                        Data::Raw(b"number".to_vec().try_into().unwrap()),
+                        Data::Raw(10u32.encode().try_into().unwrap())
+                    ),
+                    (
+                        Data::Raw(b"text".to_vec().try_into().unwrap()),
+                        Data::Raw(b"10".to_vec().try_into().unwrap())
+                    ),
+                ]
+                .try_into()
+                .unwrap();
+
+            
+			let (i, useridentity_count) = <Useridentities<T>>::try_mutate(
+				|useridentities| -> Result<(UseridentityIndex, usize), DispatchError> {
+					useridentities
+						.try_push(Some(
+
+    IdentityInfo {
+        display: Data::Raw(b"ten".to_vec().try_into().unwrap()),
+        legal: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        image: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        web: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        riot: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        email: Data::Raw(email.try_into().unwrap()),
+        twitter: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        pgp_fingerprint: None,
+        additional: add
+    }
+
+                                ))
+
+						.map_err(|_| Error::<T>::TooManyUseridentities)?;
+					Ok(((useridentities.len() - 1) as UseridentityIndex, useridentities.len()))
+				},
+			)?;
+
+			Self::deposit_event(Event::UseridentityAdded { useridentity_index: i });
+
+			Ok(Some(T::WeightInfo::add_useridentity(useridentity_count as u32)).into())
+		}
+        
 
 		/// Set an account's identity information and reserve the appropriate deposit.
 		///
@@ -584,6 +797,58 @@ pub mod pallet {
 			Ok(Some(T::WeightInfo::request_judgement(judgements as u32, extra_fields as u32))
 				.into())
 		}
+
+
+		#[pallet::weight(T::WeightInfo::request_judgement(
+			T::MaxRegistrars::get().into(), // R
+			T::MaxAdditionalFields::get().into(), // X
+		))]
+		pub fn request_registration_sel(
+			origin: OriginFor<T>,
+			email: Vec<u8>,
+			#[pallet::compact] reg_index: RegistrarIndex,
+			#[pallet::compact] max_fee: BalanceOf<T>,
+		) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin)?;
+			let registrars = <Registrars<T>>::get();
+			let registrar = registrars
+				.get(reg_index as usize)
+				.and_then(Option::as_ref)
+				.ok_or(Error::<T>::EmptyIndex)?;
+			ensure!(max_fee >= registrar.fee, Error::<T>::FeeChanged);
+         
+            let xx : BoundedVec<_, T::MaxAdditionalFields> = email.try_into().unwrap();
+
+			let mut id = <Identity1Of<T>>::get(&xx).ok_or(Error::<T>::NoIdentity)?;
+
+			let item = (reg_index, Judgement::FeePaid(registrar.fee));
+			match id.judgements.binary_search_by_key(&reg_index, |x| x.0) {
+				Ok(i) =>
+					if id.judgements[i].1.is_sticky() {
+						Err(Error::<T>::StickyJudgement)?
+					} else {
+						id.judgements[i] = item
+					},
+				Err(i) =>
+					id.judgements.try_insert(i, item).map_err(|_| Error::<T>::TooManyRegistrars)?,
+			}
+
+			T::Currency::reserve(&sender, registrar.fee)?;
+
+			let judgements = id.judgements.len();
+			let extra_fields = id.info.additional.len();
+			<IdentityOf<T>>::insert(&sender, id);
+
+			Self::deposit_event(Event::JudgementRequested {
+				who: sender,
+				registrar_index: reg_index,
+			});
+
+			Ok(Some(T::WeightInfo::request_judgement(judgements as u32, extra_fields as u32))
+				.into())
+		}
+
+
 
 		/// Cancel a previous request.
 		///
@@ -988,38 +1253,14 @@ pub mod pallet {
 		}
 
 
-
-
-///  email
-///  phone
-///  passwordhash
-///  smshash
-///  emailhash
-///
-///
-///
-		pub fn create_user(origin: OriginFor<T>,
-                           email: Vec<u8>,
-                           password: Vec<u8> ) -> DispatchResult {
-        }
-
-		pub fn smsverify_user(origin: OriginFor<T>,
-                           email: Vec<u8>,
-                           password: Vec<u8> ) -> DispatchResult {
-        }
-
-		pub fn emailverify_user(origin: OriginFor<T>,
-                           email: Vec<u8>,
-                           password: Vec<u8> ) -> DispatchResult {
-        }
-
-		pub fn login_user(origin: OriginFor<T>,
-                           email: Vec<u8>,
-                           password: Vec<u8> ) -> DispatchResult {
-        }
-        
-        
 	}
+
+
+
+
+
+
+
 }
 
 
@@ -1034,36 +1275,5 @@ impl<T: Config> Pallet<T> {
 			.filter_map(|a| SuperOf::<T>::get(&a).map(|x| (a, x.1)))
 			.collect()
 	}
-
-
-    fn ten() -> IdentityInfo<MaxAdditionalFields> {
-	IdentityInfo {
-		display: Data::Raw(b"ten".to_vec().try_into().unwrap()),
-		legal: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-		..Default::default()
-	}
-}
-
-   fn addemailentry() ->  IdentityInfo<MaxAdditionalFields> {
-
-   Identity::set_identity(
-			Origin::signed(10),
-			Box::new(IdentityInfo {
-				additional: vec![
-					(
-						Data::Raw(b"number".to_vec().try_into().unwrap()),
-						Data::Raw(10u32.encode().try_into().unwrap())
-					),
-					(
-						Data::Raw(b"text".to_vec().try_into().unwrap()),
-						Data::Raw(b"10".to_vec().try_into().unwrap())
-					),
-				]
-				.try_into()
-				.unwrap(),
-				..Default::default()
-			})
-		));
-  }
 
 }

@@ -53,6 +53,8 @@ pub enum Data {
 	ShaThree256([u8; 32]),
 }
 
+
+
 impl Decode for Data {
 	fn decode<I: codec::Input>(input: &mut I) -> sp_std::result::Result<Self, codec::Error> {
 		let b = input.read_byte()?;
@@ -173,6 +175,7 @@ impl Default for Data {
 		Self::None
 	}
 }
+
 
 /// An identifier for a single name registrar/identity verification service.
 pub type RegistrarIndex = u32;
@@ -332,6 +335,8 @@ pub struct IdentityInfo<FieldLimit: Get<u32>> {
 	pub twitter: Data,
 }
 
+
+
 /// Information concerning the identity of the controller of an account.
 ///
 /// NOTE: This is stored separately primarily to facilitate the addition of extra fields in a
@@ -360,6 +365,38 @@ pub struct Registration<
 	/// Information on the identity.
 	pub info: IdentityInfo<MaxAdditionalFields>,
 }
+
+
+
+/// Information concerning the identity of the controller of an account.
+///
+/// NOTE: This is stored separately primarily to facilitate the addition of extra fields in a
+/// backwards compatible way through a specialized `Decode` impl.
+#[derive(
+	CloneNoBound, Encode, Eq, MaxEncodedLen, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo,
+)]
+#[codec(mel_bound(
+	Balance: Encode + Decode + MaxEncodedLen + Copy + Clone + Debug + Eq + PartialEq + Zero + Add,
+	MaxJudgements: Get<u32>,
+	MaxAdditionalFields: Get<u32>,
+))]
+#[scale_info(skip_type_params(MaxJudgements, MaxAdditionalFields))]
+pub struct Registration2<
+	Balance: Encode + Decode + MaxEncodedLen + Copy + Clone + Debug + Eq + PartialEq,
+	MaxJudgements: Get<u32>,
+	MaxAdditionalFields: Get<u32>,
+> {
+	/// Judgements from the registrars on this identity. Stored ordered by `RegistrarIndex`. There
+	/// may be only a single judgement from each registrar.
+	pub judgements: BoundedVec<(RegistrarIndex, Judgement<Balance>), MaxJudgements>,
+
+	/// Amount held on deposit for this information.
+	pub deposit: Balance,
+
+	/// Information on the identity.
+	pub info: IdentityInfo<MaxAdditionalFields>,
+}
+
 
 impl<
 		Balance: Encode + Decode + MaxEncodedLen + Copy + Clone + Debug + Eq + PartialEq + Zero + Add,

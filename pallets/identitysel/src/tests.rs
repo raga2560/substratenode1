@@ -96,6 +96,7 @@ parameter_types! {
 	pub const FieldDeposit: u64 = 10;
 	pub const SubAccountDeposit: u64 = 10;
 	pub const MaxSubAccounts: u32 = 2;
+	pub const MaxUseridentities: u32 = 2;
 	pub const MaxAdditionalFields: u32 = 2;
 	pub const MaxRegistrars: u32 = 20;
 }
@@ -113,6 +114,7 @@ impl pallet_identitysel::Config for Test {
 	type FieldDeposit = FieldDeposit;
 	type SubAccountDeposit = SubAccountDeposit;
 	type MaxSubAccounts = MaxSubAccounts;
+	type MaxUseridentities = MaxUseridentities;
 	type MaxAdditionalFields = MaxAdditionalFields;
 	type MaxRegistrars = MaxRegistrars;
 	type RegistrarOrigin = frame_system::EnsureRoot<Self::AccountId> ;
@@ -145,6 +147,17 @@ fn twenty() -> IdentityInfo<MaxAdditionalFields> {
 		..Default::default()
 	}
 }
+
+#[test]
+fn editing_data_should_work_SEL() {
+	new_test_ext().execute_with(|| {
+		let data = |x| Data::Raw(vec![x; 1].try_into().unwrap());
+		assert_noop!(Identity::add_sub(Origin::signed(10), 20, data(1)), Error::<Test>::NoIdentity);
+		assert_ok!(Identity::set_identity(Origin::signed(10), Box::new(ten())));
+
+	});
+}
+
 
 #[test]
 fn editing_subaccounts_should_work() {

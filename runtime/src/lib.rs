@@ -369,6 +369,7 @@ parameter_types! {
     pub const MaxSubAccounts: u32 = 2;
     pub const MaxAdditionalFields: u32 = 5; 
     pub const MaxRegistrars: u32 = 20;
+    pub const MaxUseridentities: u32 = 20;
 }
 ord_parameter_types! {
     pub const One: u64 = 1;
@@ -386,6 +387,7 @@ impl pallet_identitysel::Config for Runtime {
     type SubAccountDeposit = SubAccountDeposit;
     type MaxSubAccounts = MaxSubAccounts;
     type MaxAdditionalFields = MaxAdditionalFields;
+    type MaxUseridentities = MaxUseridentities;
     type MaxRegistrars = MaxRegistrars;
     type RegistrarOrigin = frame_system::EnsureRoot<AccountId>; //EnsureOneOrRoot;
     type ForceOrigin = frame_system::EnsureRoot<AccountId>; //EnsureTwoOrRoot;
@@ -452,7 +454,6 @@ construct_runtime!(
 		Grandpa: pallet_grandpa::{Pallet, Call, Storage, Config, Event},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
         Nicks: pallet_nicks::{Pallet, Call, Storage, Event<T>},
-        Identity: pallet_identitysel::{Pallet, Call, Storage, Event<T>},
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
         //NonFungibleTokenModule: orml_nft::{Pallet, Call,   Storage,  Config<T>},
@@ -463,6 +464,7 @@ construct_runtime!(
 		CrowdModule: pallet_crowd::{Pallet, Call, Storage, Event<T>},
         LooseTemplateModule: pallet_loose::{Pallet, Call, Storage, Event<T>},
 		subkitty: pallet_kitty::{Pallet, Call, Storage, Event<T>},
+        Identity: pallet_identitysel::{Pallet, Call,  Storage, Event<T>},
 	}
 );
 

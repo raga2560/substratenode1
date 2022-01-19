@@ -45,6 +45,7 @@ use sp_std::marker::PhantomData;
 /// Weight functions needed for pallet_identity.
 pub trait WeightInfo {
 	fn add_registrar(r: u32, ) -> Weight;
+	fn add_useridentity(r: u32, ) -> Weight;
 	fn set_identity(r: u32, x: u32, ) -> Weight;
 	fn set_subs_new(s: u32, ) -> Weight;
 	fn set_subs_old(p: u32, ) -> Weight;
@@ -67,6 +68,14 @@ pub struct SubstrateWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for SubstrateWeight<T> {
 	// Storage: Identity Registrars (r:1 w:1)
 	fn add_registrar(r: u32, ) -> Weight {
+		(19_176_000 as Weight)
+			// Standard Error: 5_000
+			.saturating_add((313_000 as Weight).saturating_mul(r as Weight))
+			.saturating_add(T::DbWeight::get().reads(1 as Weight))
+			.saturating_add(T::DbWeight::get().writes(1 as Weight))
+	}
+
+	fn add_useridentity(r: u32, ) -> Weight {
 		(19_176_000 as Weight)
 			// Standard Error: 5_000
 			.saturating_add((313_000 as Weight).saturating_mul(r as Weight))
@@ -241,6 +250,16 @@ impl WeightInfo for () {
 			.saturating_add(RocksDbWeight::get().reads(1 as Weight))
 			.saturating_add(RocksDbWeight::get().writes(1 as Weight))
 	}
+
+
+     fn add_useridentity(r: u32, ) -> Weight {
+        (19_176_000 as Weight)
+            // Standard Error: 5_000
+            .saturating_add((313_000 as Weight).saturating_mul(r as Weight))
+            .saturating_add(RocksDbWeight::get().reads(1 as Weight))
+            .saturating_add(RocksDbWeight::get().writes(1 as Weight))
+    }
+
 	// Storage: Identity IdentityOf (r:1 w:1)
 	fn set_identity(r: u32, x: u32, ) -> Weight {
 		(44_668_000 as Weight)
