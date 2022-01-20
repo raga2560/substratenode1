@@ -193,7 +193,7 @@ pub mod pallet {
 	pub(super) type Identity1Of<T: Config> = StorageMap<
 		_,
 		Twox64Concat,
-		BoundedVec<u8, T::MaxAdditionalFields> ,
+		BoundedVec<u8, T::MaxRegistrars> ,
 		Registration<BalanceOf<T>, T::MaxRegistrars, T::MaxAdditionalFields>,
 		OptionQuery,
 	>;
@@ -246,6 +246,11 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
+
+        IdentityAlreadyClaimed,
+
+        LoginFailed,
+
 		/// Too many subs-accounts.
 		TooManySubAccounts,
 
@@ -803,24 +808,57 @@ pub mod pallet {
 			T::MaxRegistrars::get().into(), // R
 			T::MaxAdditionalFields::get().into(), // X
 		))]
-		pub fn request_registration_sel(
+		pub fn request_registration_sel11(
 			origin: OriginFor<T>,
 			email: Vec<u8>,
-			#[pallet::compact] reg_index: RegistrarIndex,
-			#[pallet::compact] max_fee: BalanceOf<T>,
+			password: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
-			let registrars = <Registrars<T>>::get();
-			let registrar = registrars
-				.get(reg_index as usize)
-				.and_then(Option::as_ref)
-				.ok_or(Error::<T>::EmptyIndex)?;
-			ensure!(max_fee >= registrar.fee, Error::<T>::FeeChanged);
-         
-            let xx : BoundedVec<_, T::MaxAdditionalFields> = email.try_into().unwrap();
 
-			let mut id = <Identity1Of<T>>::get(&xx).ok_or(Error::<T>::NoIdentity)?;
+         //   let _x2 = Pallet::<T>::test1(email.clone());
+            let xx : BoundedVec<_, T::MaxRegistrars> = email.clone().try_into().unwrap();
+        
+            ensure!(!Identity1Of::<T>::contains_key(&xx), Error::<T>::IdentityAlreadyClaimed);
 
+
+//            let xx = BoundedVec<_, T::MaxAdditionalFields>::try_from(email);
+
+			//let mut id = <Identity1Of<T>>::get(&xx).ok_or(Error::<T>::NoIdentity)?;
+
+              let add: BoundedVec<_, T::MaxAdditionalFields> = vec![
+                    (
+                        Data::Raw(b"number".to_vec().try_into().unwrap()),
+                        Data::Raw(10u32.encode().try_into().unwrap())
+                    ),
+                    (
+                        Data::Raw(b"text".to_vec().try_into().unwrap()),
+                        Data::Raw(b"10".to_vec().try_into().unwrap())
+                    ),
+                ]
+                .try_into()
+                .unwrap();
+
+
+       let info =    IdentityInfo {
+        display: Data::Raw(b"ten".to_vec().try_into().unwrap()),
+        legal: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        image: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        web: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        riot: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        email: Data::Raw(email.clone().try_into().unwrap()),
+        twitter: Data::Raw(password.clone().try_into().unwrap()),
+        pgp_fingerprint: None,
+        additional: add
+    };
+
+
+            let reg = Registration {
+                    info: info,
+                    judgements: BoundedVec::default(),
+                    deposit: Zero::zero(),
+                };
+
+           /* 
 			let item = (reg_index, Judgement::FeePaid(registrar.fee));
 			match id.judgements.binary_search_by_key(&reg_index, |x| x.0) {
 				Ok(i) =>
@@ -832,22 +870,144 @@ pub mod pallet {
 				Err(i) =>
 					id.judgements.try_insert(i, item).map_err(|_| Error::<T>::TooManyRegistrars)?,
 			}
+            */
 
-			T::Currency::reserve(&sender, registrar.fee)?;
-
-			let judgements = id.judgements.len();
-			let extra_fields = id.info.additional.len();
-			<IdentityOf<T>>::insert(&sender, id);
-
+			//T::Currency::reserve(&sender, registrar.fee)?;
+         
+            //id.info = info;
+            
+			<Identity1Of<T>>::insert(xx, reg);
+/*
 			Self::deposit_event(Event::JudgementRequested {
 				who: sender,
 				registrar_index: reg_index,
 			});
+            */
 
-			Ok(Some(T::WeightInfo::request_judgement(judgements as u32, extra_fields as u32))
+			Ok(Some(T::WeightInfo::request_judgement(10 as u32, 5 as u32))
 				.into())
 		}
 
+
+
+		#[pallet::weight(T::WeightInfo::request_judgement(
+			T::MaxRegistrars::get().into(), // R
+			T::MaxAdditionalFields::get().into(), // X
+		))]
+		pub fn login_access_sel12(
+			origin: OriginFor<T>,
+			email: Vec<u8>,
+			password: Vec<u8>,
+		) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin)?;
+
+
+            let xx : BoundedVec<_, T::MaxRegistrars> = email.clone().try_into().unwrap();
+
+			let id = <Identity1Of<T>>::get(&xx).ok_or(Error::<T>::NoIdentity)?;
+
+            let info = id.info;
+        
+            let passtocheck = Data::Raw(password.clone().try_into().unwrap());
+
+            ensure!(info.twitter == passtocheck , Error::<T>::LoginFailed);
+            /*
+
+              let add: BoundedVec<_, T::MaxAdditionalFields> = vec![
+                    (
+                        Data::Raw(b"number".to_vec().try_into().unwrap()),
+                        Data::Raw(10u32.encode().try_into().unwrap())
+                    ),
+                    (
+                        Data::Raw(b"text".to_vec().try_into().unwrap()),
+                        Data::Raw(b"10".to_vec().try_into().unwrap())
+                    ),
+                ]
+                .try_into()
+                .unwrap();
+
+
+       let info =    IdentityInfo {
+        display: Data::Raw(b"ten".to_vec().try_into().unwrap()),
+        legal: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        image: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        web: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        riot: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        email: Data::Raw(email.clone().try_into().unwrap()),
+        twitter: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        pgp_fingerprint: None,
+        additional: add
+    };
+
+
+            let reg = Registration {
+                    info: info,
+                    judgements: BoundedVec::default(),
+                    deposit: Zero::zero(),
+                };
+
+            
+			<Identity1Of<T>>::insert(xx, reg);
+*/
+			Ok(Some(T::WeightInfo::request_judgement(10 as u32, 5 as u32))
+				.into())
+		}
+
+
+		#[pallet::weight(T::WeightInfo::request_judgement(
+			T::MaxRegistrars::get().into(), // R
+			T::MaxAdditionalFields::get().into(), // X
+		))]
+		pub fn change_password_sel13(
+			origin: OriginFor<T>,
+			email: Vec<u8>,
+			password: Vec<u8>,
+		) -> DispatchResultWithPostInfo {
+			let sender = ensure_signed(origin)?;
+
+
+            let xx : BoundedVec<_, T::MaxRegistrars> = email.clone().try_into().unwrap();
+
+
+              let add: BoundedVec<_, T::MaxAdditionalFields> = vec![
+                    (
+                        Data::Raw(b"number".to_vec().try_into().unwrap()),
+                        Data::Raw(10u32.encode().try_into().unwrap())
+                    ),
+                    (
+                        Data::Raw(b"text".to_vec().try_into().unwrap()),
+                        Data::Raw(b"10".to_vec().try_into().unwrap())
+                    ),
+                ]
+                .try_into()
+                .unwrap();
+
+
+       let info =    IdentityInfo {
+        display: Data::Raw(b"ten".to_vec().try_into().unwrap()),
+        legal: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        image: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        web: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        riot: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        email: Data::Raw(email.clone().try_into().unwrap()),
+        twitter: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        pgp_fingerprint: None,
+        additional: add
+    };
+
+
+            let reg = Registration {
+                    info: info,
+                    judgements: BoundedVec::default(),
+                    deposit: Zero::zero(),
+                };
+
+            
+			<Identity1Of<T>>::insert(xx, reg);
+
+			Ok(Some(T::WeightInfo::request_judgement(10 as u32, 5 as u32))
+				.into())
+		}
 
 
 		/// Cancel a previous request.
@@ -1266,7 +1426,14 @@ pub mod pallet {
 
 
 
+
 impl<T: Config> Pallet<T> {
+
+
+	pub fn test1(who: Vec<u8>) -> Vec<u8> {
+        who
+    }
+
 	/// Get the subs of an account.
 	pub fn subs(who: &T::AccountId) -> Vec<(T::AccountId, Data)> {
 		SubsOf::<T>::get(who)
@@ -1276,4 +1443,43 @@ impl<T: Config> Pallet<T> {
 			.collect()
 	}
 
+/*
+	pub fn get_default_identity() -> IdentityInfo<T::MaxAdditionalFields> {
+
+        let add: frame_support::traits::BoundedVec<_, T::MaxAdditionalFields> = vec![
+                    (
+                        Data::Raw(b"number".to_vec().try_into().unwrap()),
+                        Data::Raw(b"10".to_vec().try_into().unwrap())
+                    ),
+                    (
+                        Data::Raw(b"text".to_vec().try_into().unwrap()),
+                        Data::Raw(b"10".to_vec().try_into().unwrap())
+                    ),
+                ]
+                .try_into()
+                .unwrap();
+
+            
+    let id = IdentityInfo {
+        display: Data::Raw(b"ten".to_vec().try_into().unwrap()),
+        legal: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        image: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        web: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        riot: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+//        email: Data::Raw(email.try_into().unwrap()),
+        email: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        twitter: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        pgp_fingerprint: None,
+        additional: add
+    };
+
+
+    id
+
+    }
+*/
+	pub fn update_email_password(email: Vec<u8>, password: Vec<u8>,id: IdentityInfo<T::MaxAdditionalFields> ) -> IdentityInfo<T::MaxAdditionalFields> {
+     //10u32.encode().try_into().unwrap();
+     id
+     }
 }

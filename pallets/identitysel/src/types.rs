@@ -383,6 +383,7 @@ pub struct Registration<
 #[scale_info(skip_type_params(MaxJudgements, MaxAdditionalFields))]
 pub struct Registration2<
 	Balance: Encode + Decode + MaxEncodedLen + Copy + Clone + Debug + Eq + PartialEq,
+	//AccountId: Encode + Decode + Clone + Debug + Eq + PartialEq + MaxEncodedLen,
 	MaxJudgements: Get<u32>,
 	MaxAdditionalFields: Get<u32>,
 > {
@@ -392,11 +393,41 @@ pub struct Registration2<
 
 	/// Amount held on deposit for this information.
 	pub deposit: Balance,
+    
+	// Public-key of user  
+	//pub account: AccountId,
 
 	/// Information on the identity.
 	pub info: IdentityInfo<MaxAdditionalFields>,
 }
 
+
+impl<
+		Balance: Encode + Decode + MaxEncodedLen + Copy + Clone + Debug + Eq + PartialEq + Zero + Add,
+		MaxJudgements: Get<u32>,
+		MaxAdditionalFields: Get<u32>,
+	> Registration2<Balance,   MaxJudgements, MaxAdditionalFields>
+{
+	pub(crate) fn total_deposit(&self) -> Balance {
+		self.deposit +
+			self.judgements
+				.iter()
+				.map(|(_, ref j)| if let Judgement::FeePaid(fee) = j { *fee } else { Zero::zero() })
+				.fold(Zero::zero(), |a, i| a + i)
+	}
+}
+
+impl<
+		Balance: Encode + Decode + MaxEncodedLen + Copy + Clone + Debug + Eq + PartialEq,
+		MaxJudgements: Get<u32>,
+		MaxAdditionalFields: Get<u32>,
+	> Decode for Registration2<Balance,   MaxJudgements, MaxAdditionalFields>
+{
+	fn decode<I: codec::Input>(input: &mut I) -> sp_std::result::Result<Self, codec::Error> {
+		let (judgements, deposit, info) = Decode::decode(&mut AppendZerosInput::new(input))?;
+		Ok(Self { judgements, deposit, info })
+	}
+}
 
 impl<
 		Balance: Encode + Decode + MaxEncodedLen + Copy + Clone + Debug + Eq + PartialEq + Zero + Add,

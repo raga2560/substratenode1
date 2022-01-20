@@ -149,11 +149,17 @@ fn twenty() -> IdentityInfo<MaxAdditionalFields> {
 }
 
 #[test]
-fn editing_data_should_work_SEL() {
+fn editing_data_should_work_sel() {
 	new_test_ext().execute_with(|| {
 		let data = |x| Data::Raw(vec![x; 1].try_into().unwrap());
-		assert_noop!(Identity::add_sub(Origin::signed(10), 20, data(1)), Error::<Test>::NoIdentity);
-		assert_ok!(Identity::set_identity(Origin::signed(10), Box::new(ten())));
+        let user: Vec<u8> = b"a@b.com".to_vec().try_into().unwrap();
+        let pass: Vec<u8> = b"hello123".to_vec().try_into().unwrap();
+        let wrongpass: Vec<u8> = b"xxhello123".to_vec().try_into().unwrap();
+        let wronguser: Vec<u8> = b"a@wrong.com".to_vec().try_into().unwrap();
+		assert_ok!(Identity::request_registration_sel11(Origin::signed(10),user.clone(), pass.clone()  ) );
+		assert_ok!(Identity::login_access_sel12(Origin::signed(10),user.clone(), pass.clone()  ) );
+		assert_noop!(Identity::login_access_sel12(Origin::signed(10), wronguser, pass.clone()), Error::<Test>::NoIdentity);
+		assert_noop!(Identity::login_access_sel12(Origin::signed(10), user.clone(), wrongpass), Error::<Test>::LoginFailed);
 
 	});
 }
