@@ -99,6 +99,7 @@ parameter_types! {
 	pub const MaxUseridentities: u32 = 2;
 	pub const MaxAdditionalFields: u32 = 2;
 	pub const MaxRegistrars: u32 = 20;
+	pub const MaxEmailsize: u32 = 30;
 }
 ord_parameter_types! {
 	pub const One: u64 = 1;
@@ -117,6 +118,7 @@ impl pallet_identitysel::Config for Test {
 	type MaxUseridentities = MaxUseridentities;
 	type MaxAdditionalFields = MaxAdditionalFields;
 	type MaxRegistrars = MaxRegistrars;
+	type MaxEmailsize = MaxEmailsize;
 	type RegistrarOrigin = frame_system::EnsureRoot<Self::AccountId> ;
 	type ForceOrigin = frame_system::EnsureRoot<Self::AccountId>  ;
 	type WeightInfo = ();
@@ -149,7 +151,7 @@ fn twenty() -> IdentityInfo<MaxAdditionalFields> {
 }
 
 #[test]
-fn editing_data_should_work_sel() {
+fn editing_data_should_work_sela() {
 	new_test_ext().execute_with(|| {
 		let data = |x| Data::Raw(vec![x; 1].try_into().unwrap());
         let user: Vec<u8> = b"a@b.com".to_vec().try_into().unwrap();
@@ -164,6 +166,25 @@ fn editing_data_should_work_sel() {
 	});
 }
 
+
+#[test]
+fn changepassword_data_should_work_sela() {
+	new_test_ext().execute_with(|| {
+		let data = |x| Data::Raw(vec![x; 1].try_into().unwrap());
+        let user: Vec<u8> = b"a@b.com".to_vec().try_into().unwrap();
+        let pass: Vec<u8> = b"hello123".to_vec().try_into().unwrap();
+        let changedpass: Vec<u8> = b"welcome123".to_vec().try_into().unwrap();
+        let wrongpass: Vec<u8> = b"xxhello123".to_vec().try_into().unwrap();
+        let wronguser: Vec<u8> = b"a@wrong.com".to_vec().try_into().unwrap();
+		assert_ok!(Identity::request_registration_sel11(Origin::signed(10),user.clone(), pass.clone()  ) );
+		assert_ok!(Identity::login_access_sel12(Origin::signed(10),user.clone(), pass.clone()  ) );
+		assert_ok!(Identity::change_password_sel13(Origin::signed(10),user.clone(), changedpass.clone()  ) );
+		assert_noop!(Identity::login_access_sel12(Origin::signed(10), user.clone(), pass), Error::<Test>::LoginFailed);
+		assert_ok!(Identity::login_access_sel12(Origin::signed(10),user.clone(), changedpass.clone()  ) );
+
+
+	});
+}
 
 #[test]
 fn editing_subaccounts_should_work() {

@@ -78,6 +78,8 @@ mod tests;
 mod types;
 pub mod weights;
 
+use sp_io::hashing::{blake2_128, blake2_256, twox_128, twox_256, twox_64};
+
 use frame_support::traits::{BalanceStatus, Currency, OnUnbalanced, ReservableCurrency};
 use sp_runtime::traits::{AppendZerosInput, Saturating, 
     AccountIdConversion,
@@ -149,6 +151,8 @@ pub mod pallet {
 		#[pallet::constant]
 		type MaxRegistrars: Get<u32>;
 
+		type MaxEmailsize: Get<u32>;
+
 		type MaxUseridentities: Get<u32>;
 		/// What to do with slashed funds.
 		type Slashed: OnUnbalanced<NegativeImbalanceOf<Self>>;
@@ -193,7 +197,7 @@ pub mod pallet {
 	pub(super) type Identity1Of<T: Config> = StorageMap<
 		_,
 		Twox64Concat,
-		BoundedVec<u8, T::MaxRegistrars> ,
+		BoundedVec<u8, T::MaxEmailsize> ,
 		Registration<BalanceOf<T>, T::MaxRegistrars, T::MaxAdditionalFields>,
 		OptionQuery,
 	>;
@@ -816,7 +820,7 @@ pub mod pallet {
 			let sender = ensure_signed(origin)?;
 
          //   let _x2 = Pallet::<T>::test1(email.clone());
-            let xx : BoundedVec<_, T::MaxRegistrars> = email.clone().try_into().unwrap();
+            let xx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
         
             ensure!(!Identity1Of::<T>::contains_key(&xx), Error::<T>::IdentityAlreadyClaimed);
 
@@ -846,7 +850,7 @@ pub mod pallet {
         web: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
         riot: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
         email: Data::Raw(email.clone().try_into().unwrap()),
-        twitter: Data::Raw(password.clone().try_into().unwrap()),
+        twitter: Data::BlakeTwo256(blake2_256(&password.clone())),
         pgp_fingerprint: None,
         additional: add
     };
@@ -901,50 +905,18 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let sender = ensure_signed(origin)?;
 
-
-            let xx : BoundedVec<_, T::MaxRegistrars> = email.clone().try_into().unwrap();
+            let xx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
 
 			let id = <Identity1Of<T>>::get(&xx).ok_or(Error::<T>::NoIdentity)?;
 
             let info = id.info;
         
-            let passtocheck = Data::Raw(password.clone().try_into().unwrap());
+            //let r = blake2_128(password.clone()).unwrap();
+
+            let passtocheck = Data::BlakeTwo256(blake2_256(&password.clone()));
 
             ensure!(info.twitter == passtocheck , Error::<T>::LoginFailed);
             /*
-
-              let add: BoundedVec<_, T::MaxAdditionalFields> = vec![
-                    (
-                        Data::Raw(b"number".to_vec().try_into().unwrap()),
-                        Data::Raw(10u32.encode().try_into().unwrap())
-                    ),
-                    (
-                        Data::Raw(b"text".to_vec().try_into().unwrap()),
-                        Data::Raw(b"10".to_vec().try_into().unwrap())
-                    ),
-                ]
-                .try_into()
-                .unwrap();
-
-
-       let info =    IdentityInfo {
-        display: Data::Raw(b"ten".to_vec().try_into().unwrap()),
-        legal: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-        image: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-        web: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-        riot: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-        email: Data::Raw(email.clone().try_into().unwrap()),
-        twitter: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-        pgp_fingerprint: None,
-        additional: add
-    };
-
-
-            let reg = Registration {
-                    info: info,
-                    judgements: BoundedVec::default(),
-                    deposit: Zero::zero(),
-                };
 
             
 			<Identity1Of<T>>::insert(xx, reg);
@@ -963,43 +935,24 @@ pub mod pallet {
 			email: Vec<u8>,
 			password: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
+
 			let sender = ensure_signed(origin)?;
 
+            let xx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
 
-            let xx : BoundedVec<_, T::MaxRegistrars> = email.clone().try_into().unwrap();
+			let id = <Identity1Of<T>>::get(&xx).ok_or(Error::<T>::NoIdentity)?;
 
+            let mut info = id.info;
 
-              let add: BoundedVec<_, T::MaxAdditionalFields> = vec![
-                    (
-                        Data::Raw(b"number".to_vec().try_into().unwrap()),
-                        Data::Raw(10u32.encode().try_into().unwrap())
-                    ),
-                    (
-                        Data::Raw(b"text".to_vec().try_into().unwrap()),
-                        Data::Raw(b"10".to_vec().try_into().unwrap())
-                    ),
-                ]
-                .try_into()
-                .unwrap();
+            let newpassword = Data::BlakeTwo256(blake2_256(&password.clone()));
 
-
-       let info =    IdentityInfo {
-        display: Data::Raw(b"ten".to_vec().try_into().unwrap()),
-        legal: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-        image: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-        web: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-        riot: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-        email: Data::Raw(email.clone().try_into().unwrap()),
-        twitter: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-        pgp_fingerprint: None,
-        additional: add
-    };
-
+            info.twitter  = newpassword;
 
             let reg = Registration {
                     info: info,
                     judgements: BoundedVec::default(),
                     deposit: Zero::zero(),
+
                 };
 
             
