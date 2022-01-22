@@ -151,7 +151,7 @@ fn twenty() -> IdentityInfo<MaxAdditionalFields> {
 }
 
 #[test]
-fn editing_data_should_work_sela() {
+fn userregistration_should_work_sela() {
 	new_test_ext().execute_with(|| {
 		let data = |x| Data::Raw(vec![x; 1].try_into().unwrap());
         let user: Vec<u8> = b"a@b.com".to_vec().try_into().unwrap();
@@ -168,7 +168,7 @@ fn editing_data_should_work_sela() {
 
 
 #[test]
-fn changepassword_data_should_work_sela() {
+fn changepassword_should_work_sela() {
 	new_test_ext().execute_with(|| {
 		let data = |x| Data::Raw(vec![x; 1].try_into().unwrap());
         let user: Vec<u8> = b"a@b.com".to_vec().try_into().unwrap();

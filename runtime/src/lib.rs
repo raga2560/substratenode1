@@ -369,6 +369,7 @@ parameter_types! {
     pub const MaxSubAccounts: u32 = 2;
     pub const MaxAdditionalFields: u32 = 5; 
     pub const MaxRegistrars: u32 = 20;
+    pub const MaxEmailsize: u32 = 30;
     pub const MaxUseridentities: u32 = 20;
 }
 ord_parameter_types! {
@@ -389,9 +390,11 @@ impl pallet_identitysel::Config for Runtime {
     type MaxAdditionalFields = MaxAdditionalFields;
     type MaxUseridentities = MaxUseridentities;
     type MaxRegistrars = MaxRegistrars;
+    type MaxEmailsize = MaxEmailsize;
     type RegistrarOrigin = frame_system::EnsureRoot<AccountId>; //EnsureOneOrRoot;
     type ForceOrigin = frame_system::EnsureRoot<AccountId>; //EnsureTwoOrRoot;
     type WeightInfo = ();
+//    type AccountId = <Type as frame_system::Config>::AccountId;
 }
 
 

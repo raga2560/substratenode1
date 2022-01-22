@@ -22,12 +22,14 @@ use frame_support::{
 	traits::{ConstU32, Get},
 	BoundedVec, CloneNoBound, PartialEqNoBound, RuntimeDebugNoBound,
 };
+
 use scale_info::{
 	build::{Fields, Variants},
 	meta_type, Path, Type, TypeInfo, TypeParameter,
 };
-use sp_runtime::{traits::Zero, RuntimeDebug};
+use sp_runtime::{traits::Zero, RuntimeDebug, traits::AccountIdConversion};
 use sp_std::{fmt::Debug, iter::once, ops::Add, prelude::*};
+
 
 /// Either underlying data blob if it is at most 32 bytes, or a hash of it. If the data is greater
 /// than 32-bytes then it will be truncated when encoding.
@@ -336,6 +338,61 @@ pub struct IdentityInfo<FieldLimit: Get<u32>> {
 }
 
 
+#[derive(
+	CloneNoBound, Encode, Decode, Eq, MaxEncodedLen, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo,
+)]
+#[codec(mel_bound(FieldLimit: Get<u32>))]
+#[cfg_attr(test, derive(frame_support::DefaultNoBound))]
+#[scale_info(skip_type_params(FieldLimit))]
+pub struct IdentityInfoSel<FieldLimit: Get<u32>> {
+	/// Additional fields of the identity that are not catered for with the struct's explicit
+	/// fields.
+	pub additional: BoundedVec<(Data, Data), FieldLimit>,
+
+	/// A reasonable display name for the controller of the account. This should be whatever it is
+	/// that it is typically known as and should not be confusable with other entities, given
+	/// reasonable context.
+	///
+	/// Stored as UTF-8.
+	pub display: Data,
+
+	/// The full legal name in the local jurisdiction of the entity. This might be a bit
+	/// long-winded.
+	///
+	/// Stored as UTF-8.
+	pub legal: Data,
+
+	/// A representative website held by the controller of the account.
+	///
+	/// NOTE: `https://` is automatically prepended.
+	///
+	/// Stored as UTF-8.
+	pub web: Data,
+
+	/// The Riot/Matrix handle held by the controller of the account.
+	///
+	/// Stored as UTF-8.
+	pub riot: Data,
+
+	/// The email address of the controller of the account.
+	///
+	/// Stored as UTF-8.
+	pub email: Data,
+
+	/// The PGP/GPG public key of the controller of the account.
+	pub pgp_fingerprint: Option<[u8; 20]>,
+
+	pub account: Data,
+
+	/// A graphic image representing the controller of the account. Should be a company,
+	/// organization or project logo or a headshot in the case of a human.
+	pub image: Data,
+
+	/// The Twitter identity. The leading `@` character may be elided.
+	pub twitter: Data,
+}
+
+
 
 /// Information concerning the identity of the controller of an account.
 ///
@@ -377,13 +434,14 @@ pub struct Registration<
 )]
 #[codec(mel_bound(
 	Balance: Encode + Decode + MaxEncodedLen + Copy + Clone + Debug + Eq + PartialEq + Zero + Add,
+	AccountId: Encode + Decode + MaxEncodedLen +  Clone + Debug + Eq + PartialEq ,
 	MaxJudgements: Get<u32>,
 	MaxAdditionalFields: Get<u32>,
 ))]
 #[scale_info(skip_type_params(MaxJudgements, MaxAdditionalFields))]
-pub struct Registration2<
+pub struct RegistrationSel<
 	Balance: Encode + Decode + MaxEncodedLen + Copy + Clone + Debug + Eq + PartialEq,
-	//AccountId: Encode + Decode + Clone + Debug + Eq + PartialEq + MaxEncodedLen,
+	AccountId: Encode + Decode + MaxEncodedLen + Clone + Debug + Eq + PartialEq,
 	MaxJudgements: Get<u32>,
 	MaxAdditionalFields: Get<u32>,
 > {
@@ -393,20 +451,24 @@ pub struct Registration2<
 
 	/// Amount held on deposit for this information.
 	pub deposit: Balance,
+
+
+	pub accountId: AccountId,
     
 	// Public-key of user  
 	//pub account: AccountId,
 
 	/// Information on the identity.
-	pub info: IdentityInfo<MaxAdditionalFields>,
+	pub info: IdentityInfoSel<MaxAdditionalFields>,
 }
 
 
 impl<
 		Balance: Encode + Decode + MaxEncodedLen + Copy + Clone + Debug + Eq + PartialEq + Zero + Add,
+		AccountId: Encode + Decode + MaxEncodedLen + Clone + Debug + Eq + PartialEq ,
 		MaxJudgements: Get<u32>,
 		MaxAdditionalFields: Get<u32>,
-	> Registration2<Balance,   MaxJudgements, MaxAdditionalFields>
+	> RegistrationSel<Balance, AccountId,   MaxJudgements, MaxAdditionalFields>
 {
 	pub(crate) fn total_deposit(&self) -> Balance {
 		self.deposit +
@@ -419,13 +481,14 @@ impl<
 
 impl<
 		Balance: Encode + Decode + MaxEncodedLen + Copy + Clone + Debug + Eq + PartialEq,
+		AccountId: Encode + Decode + MaxEncodedLen + Clone + Debug + Eq + PartialEq ,
 		MaxJudgements: Get<u32>,
 		MaxAdditionalFields: Get<u32>,
-	> Decode for Registration2<Balance,   MaxJudgements, MaxAdditionalFields>
+	> Decode for RegistrationSel<Balance, AccountId,   MaxJudgements, MaxAdditionalFields>
 {
 	fn decode<I: codec::Input>(input: &mut I) -> sp_std::result::Result<Self, codec::Error> {
-		let (judgements, deposit, info) = Decode::decode(&mut AppendZerosInput::new(input))?;
-		Ok(Self { judgements, deposit, info })
+		let (judgements, deposit, accountId, info) = Decode::decode(&mut AppendZerosInput::new(input))?;
+		Ok(Self { judgements, deposit, accountId, info })
 	}
 }
 

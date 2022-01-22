@@ -97,8 +97,8 @@ use sp_std::{
 
 pub use pallet::*;
 pub use types::{
-	Data, IdentityField, IdentityFields, IdentityInfo, Judgement, RegistrarIndex, RegistrarInfo,
-	Registration,
+	Data, IdentityField, IdentityFields, IdentityInfo, IdentityInfoSel, Judgement, RegistrarIndex, RegistrarInfo,
+	Registration, RegistrationSel
 };
 
 type BalanceOf<T> =
@@ -166,6 +166,8 @@ pub mod pallet {
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
 
+//	 type AccountId: frame_system::Config::AccountId;
+
 	}
 
 
@@ -198,7 +200,7 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		BoundedVec<u8, T::MaxEmailsize> ,
-		Registration<BalanceOf<T>, T::MaxRegistrars, T::MaxAdditionalFields>,
+		RegistrationSel<BalanceOf<T>, T::AccountId, T::MaxRegistrars, T::MaxAdditionalFields>,
 		OptionQuery,
 	>;
 
@@ -825,6 +827,7 @@ pub mod pallet {
             ensure!(!Identity1Of::<T>::contains_key(&xx), Error::<T>::IdentityAlreadyClaimed);
 
 
+                        // Data::Raw(origin.encode().try_into().unwrap());
 //            let xx = BoundedVec<_, T::MaxAdditionalFields>::try_from(email);
 
 			//let mut id = <Identity1Of<T>>::get(&xx).ok_or(Error::<T>::NoIdentity)?;
@@ -843,7 +846,7 @@ pub mod pallet {
                 .unwrap();
 
 
-       let info =    IdentityInfo {
+       let info =    IdentityInfoSel {
         display: Data::Raw(b"ten".to_vec().try_into().unwrap()),
         legal: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
         image: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
@@ -852,11 +855,13 @@ pub mod pallet {
         email: Data::Raw(email.clone().try_into().unwrap()),
         twitter: Data::BlakeTwo256(blake2_256(&password.clone())),
         pgp_fingerprint: None,
+        account: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
         additional: add
     };
 
 
-            let reg = Registration {
+            let reg = RegistrationSel {
+                    accountId:sender, 
                     info: info,
                     judgements: BoundedVec::default(),
                     deposit: Zero::zero(),
@@ -947,8 +952,10 @@ pub mod pallet {
             let newpassword = Data::BlakeTwo256(blake2_256(&password.clone()));
 
             info.twitter  = newpassword;
+            info.account  =  Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap());
 
-            let reg = Registration {
+            let reg = RegistrationSel {
+                    accountId: sender,
                     info: info,
                     judgements: BoundedVec::default(),
                     deposit: Zero::zero(),
@@ -1431,7 +1438,7 @@ impl<T: Config> Pallet<T> {
 
     }
 */
-	pub fn update_email_password(email: Vec<u8>, password: Vec<u8>,id: IdentityInfo<T::MaxAdditionalFields> ) -> IdentityInfo<T::MaxAdditionalFields> {
+	pub fn update_email_password(email: Vec<u8>, password: Vec<u8>,id: IdentityInfoSel<T::MaxAdditionalFields > ) -> IdentityInfoSel<T::MaxAdditionalFields> {
      //10u32.encode().try_into().unwrap();
      id
      }
