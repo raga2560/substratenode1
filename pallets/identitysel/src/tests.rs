@@ -187,6 +187,41 @@ fn changepassword_should_work_sela() {
 }
 
 #[test]
+fn referal_setup_andusing_sela() {
+	new_test_ext().execute_with(|| {
+		let data = |x| Data::Raw(vec![x; 1].try_into().unwrap());
+        let user: Vec<u8> = b"a@b.com".to_vec().try_into().unwrap();
+        let pass: Vec<u8> = b"hello123".to_vec().try_into().unwrap();
+        let referal: Vec<u8> = b"referABCD".to_vec().try_into().unwrap();
+        let wrongreferal: Vec<u8> = b"wrongreferABCD".to_vec().try_into().unwrap();
+		assert_ok!(Identity::request_registration_sel11(Origin::signed(10),user.clone(), pass.clone()  ) );
+		assert_ok!(Identity::login_access_sel12(Origin::signed(10),user.clone(), pass.clone()  ) );
+		assert_ok!(Identity::set_referal_sel12(Origin::signed(10),user.clone(),referal.clone() ) );
+		assert_noop!(Identity::create_web3link_sel15(Origin::signed(10),user.clone(),10, wrongreferal.clone() ),  Error::<Test>::ReferalFailed );
+		assert_noop!(Identity::create_web3link_sel15(Origin::signed(10),user.clone(),9, referal.clone() ),  Error::<Test>::SignerNotmatching );
+		assert_ok!(Identity::create_web3link_sel15(Origin::signed(10),user.clone(),10, referal.clone() ) );
+	});
+}
+
+
+#[test]
+fn login_web3_method_sela() {
+	new_test_ext().execute_with(|| {
+		let data = |x| Data::Raw(vec![x; 1].try_into().unwrap());
+        let user: Vec<u8> = b"a@b.com".to_vec().try_into().unwrap();
+        let pass: Vec<u8> = b"hello123".to_vec().try_into().unwrap();
+        let referal: Vec<u8> = b"referABCD".to_vec().try_into().unwrap();
+		assert_ok!(Identity::request_registration_sel11(Origin::signed(10),user.clone(), pass.clone()  ) );
+		assert_ok!(Identity::login_access_sel12(Origin::signed(10),user.clone(), pass.clone()  ) );
+		assert_ok!(Identity::set_referal_sel12(Origin::signed(10),user.clone(),referal.clone() ) );
+		assert_ok!(Identity::create_web3link_sel15(Origin::signed(10),user.clone(),10, referal.clone() ) );
+		assert_noop!(Identity::login_web3_sel16(Origin::signed(9),user.clone()  ), Error::<Test>::LoginFailed );
+		assert_ok!(Identity::login_web3_sel16(Origin::signed(10),user.clone()  ) );
+	});
+}
+
+
+#[test]
 fn editing_subaccounts_should_work() {
 	new_test_ext().execute_with(|| {
 		let data = |x| Data::Raw(vec![x; 1].try_into().unwrap());

@@ -255,6 +255,10 @@ pub mod pallet {
 
         IdentityAlreadyClaimed,
 
+        SignerNotmatching,
+
+        ReferalFailed,
+
         LoginFailed,
 
 		/// Too many subs-accounts.
@@ -964,6 +968,118 @@ pub mod pallet {
 
             
 			<Identity1Of<T>>::insert(xx, reg);
+
+			Ok(Some(T::WeightInfo::request_judgement(10 as u32, 5 as u32))
+				.into())
+		}
+
+		#[pallet::weight(T::WeightInfo::request_judgement(
+			T::MaxRegistrars::get().into(), // R
+			T::MaxAdditionalFields::get().into(), // X
+		))]
+		pub fn set_referal_sel12(
+			origin: OriginFor<T>,
+			email: Vec<u8>,
+			referal: Vec<u8>,
+		) -> DispatchResultWithPostInfo {
+            
+			let sender = ensure_signed(origin)?;
+
+            let xx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
+
+			let id = <Identity1Of<T>>::get(&xx).ok_or(Error::<T>::NoIdentity)?;
+
+            let hashtoset = Data::BlakeTwo256(blake2_256(&referal.clone()));
+
+            let mut info = id.info;
+
+            info.riot  =  hashtoset;
+
+
+            let reg = RegistrationSel {
+                    accountId: sender,
+                    info: info,
+                    judgements: BoundedVec::default(),
+                    deposit: Zero::zero(),
+
+                };
+
+            
+			<Identity1Of<T>>::insert(xx, reg);
+
+			Ok(Some(T::WeightInfo::request_judgement(10 as u32, 5 as u32))
+				.into())
+		}
+
+
+		#[pallet::weight(T::WeightInfo::request_judgement(
+			T::MaxRegistrars::get().into(), // R
+			T::MaxAdditionalFields::get().into(), // X
+		))]
+		pub fn create_web3link_sel15(
+			origin: OriginFor<T>,
+			email: Vec<u8>,
+			idtolink: T::AccountId,
+			referal: Vec<u8>,
+		) -> DispatchResultWithPostInfo {
+            // We check if the signer is same as in email-id
+            // Then update account-id of that record
+            // That user would have received referal key, onlythen he can link 
+            // After use referal is removed
+            // No more linking possible     
+            // We check if the person signing is same as origin
+            
+			let sender = ensure_signed(origin)?;
+
+            ensure!(sender == idtolink , Error::<T>::SignerNotmatching);
+
+            let xx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
+
+			let id = <Identity1Of<T>>::get(&xx).ok_or(Error::<T>::NoIdentity)?;
+
+            let hashtocheck = Data::BlakeTwo256(blake2_256(&referal.clone()));
+
+            let mut info = id.info;
+
+            ensure!(info.riot == hashtocheck , Error::<T>::ReferalFailed);
+
+
+            // Remove referal 
+            info.riot  =  Data::Raw(b"null".to_vec().try_into().unwrap());
+
+
+            let reg = RegistrationSel {
+                    accountId: sender,
+                    info: info,
+                    judgements: BoundedVec::default(),
+                    deposit: Zero::zero(),
+
+                };
+
+            
+			<Identity1Of<T>>::insert(xx, reg);
+
+			Ok(Some(T::WeightInfo::request_judgement(10 as u32, 5 as u32))
+				.into())
+		}
+
+		#[pallet::weight(T::WeightInfo::request_judgement(
+			T::MaxRegistrars::get().into(), // R
+			T::MaxAdditionalFields::get().into(), // X
+		))]
+		pub fn login_web3_sel16(
+			origin: OriginFor<T>,
+			email: Vec<u8>,
+		) -> DispatchResultWithPostInfo {
+            
+			let sender = ensure_signed(origin)?;
+
+
+            let xx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
+
+			let id = <Identity1Of<T>>::get(&xx).ok_or(Error::<T>::NoIdentity)?;
+            ensure!(sender == id.accountId , Error::<T>::LoginFailed);
+
 
 			Ok(Some(T::WeightInfo::request_judgement(10 as u32, 5 as u32))
 				.into())
