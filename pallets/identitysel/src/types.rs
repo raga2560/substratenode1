@@ -372,7 +372,7 @@ pub struct IdentityInfoSel<FieldLimit: Get<u32>> {
 	/// The Riot/Matrix handle held by the controller of the account.
 	///
 	/// Stored as UTF-8.
-	pub riot: Data,
+	pub referalhash: Data,
 
 	/// The email address of the controller of the account.
 	///
@@ -389,7 +389,7 @@ pub struct IdentityInfoSel<FieldLimit: Get<u32>> {
 	pub image: Data,
 
 	/// The Twitter identity. The leading `@` character may be elided.
-	pub twitter: Data,
+	pub passwordhash: Data,
 }
 
 

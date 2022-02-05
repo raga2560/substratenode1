@@ -32,6 +32,8 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
+
+
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, parameter_types, ord_parameter_types, 
@@ -263,19 +265,6 @@ impl pallet_timestamp::Config for Runtime {
 	type WeightInfo = ();
 }
 
-parameter_types! {
-    pub const MaxClassMetadata: u32 = 1;
-    pub const MaxTokenMetadata: u32 = 1;
-}
-
-impl orml_nft::Config for Runtime {
-    type ClassId = u64;
-    type TokenId = u64;
-    type ClassData = ();
-    type TokenData = ();
-    type MaxClassMetadata = MaxClassMetadata;
-    type MaxTokenMetadata = MaxTokenMetadata;
-}
 
 
 
@@ -306,19 +295,11 @@ parameter_types! {
     pub const MaxNickLength: u32 = 32;
 }
 
-/*
-pub type Amount = i128;
 
-impl orml_tokens::Config for Runtime {
-	type Event = Event;
-	type Balance = Balance;
-	type Amount = Amount;
-	type CurrencyId = CurrencyId;
-	type WeightInfo = ();
-	type ExistentialDeposits = ExistentialDeposits;
-	type OnDust = ();
-}
-*/
+
+
+
+
 impl pallet_nicks::Config for Runtime {
     // The Balances pallet implements the ReservableCurrency trait.
     // `Balances` is defined in `construct_runtime!` macro. See below.
@@ -440,7 +421,21 @@ impl pallet_crowd::Config for Runtime {
 impl pallet_loose::Config for Runtime {
 	type Event = Event;
     type LocalLooseCurrency = Balances;
-//    type Looseormlnft = orml_nft::Pallet;
+    // type Looseormlnft = NFT;
+}
+
+parameter_types! {
+	pub const MaxClassMetadata: u32 = 1;
+	pub const MaxTokenMetadata: u32 = 1;
+}
+
+impl orml_nft::Config for Runtime {
+	type ClassId = u64;
+	type TokenId = u64;
+	type ClassData = ();
+	type TokenData = ();
+	type MaxClassMetadata = MaxClassMetadata;
+	type MaxTokenMetadata = MaxTokenMetadata;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -459,10 +454,10 @@ construct_runtime!(
         Nicks: pallet_nicks::{Pallet, Call, Storage, Event<T>},
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
-        //NonFungibleTokenModule: orml_nft::{Pallet, Call,   Storage,  Config<T>},
+        NFT: orml_nft::{Pallet, Call,   Storage},
 
 		// Include the custom logic from the pallet-template in the runtime.
-//		Tokens: orml_tokens::{Module,  Storage, Event<T>, Config<T>},
+		//Tokens: orml_tokens::{Pallet,  Storage, Event<T>, Config<T>},
 		TemplateModule: pallet_template::{Pallet, Call, Storage, Event<T>},
 		CrowdModule: pallet_crowd::{Pallet, Call, Storage, Event<T>},
         LooseTemplateModule: pallet_loose::{Pallet, Call, Storage, Event<T>},

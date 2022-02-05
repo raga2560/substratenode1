@@ -78,7 +78,7 @@ mod tests;
 mod types;
 pub mod weights;
 
-use sp_io::hashing::{blake2_128, blake2_256, twox_128, twox_256, twox_64};
+use sp_io::hashing::{sha2_256, blake2_128, blake2_256, twox_128, twox_256, twox_64};
 
 use frame_support::traits::{BalanceStatus, Currency, OnUnbalanced, ReservableCurrency};
 use sp_runtime::traits::{AppendZerosInput, Saturating, 
@@ -855,9 +855,9 @@ pub mod pallet {
         legal: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
         image: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
         web: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-        riot: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
+        referalhash: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
         email: Data::Raw(email.clone().try_into().unwrap()),
-        twitter: Data::BlakeTwo256(blake2_256(&password.clone())),
+        passwordhash: Data::BlakeTwo256(blake2_256(&password.clone())),
         pgp_fingerprint: None,
         account: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
         additional: add
@@ -924,7 +924,7 @@ pub mod pallet {
 
             let passtocheck = Data::BlakeTwo256(blake2_256(&password.clone()));
 
-            ensure!(info.twitter == passtocheck , Error::<T>::LoginFailed);
+            ensure!(info.passwordhash == passtocheck , Error::<T>::LoginFailed);
             /*
 
             
@@ -955,7 +955,7 @@ pub mod pallet {
 
             let newpassword = Data::BlakeTwo256(blake2_256(&password.clone()));
 
-            info.twitter  = newpassword;
+            info.passwordhash  = newpassword;
             info.account  =  Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap());
 
             let reg = RegistrationSel {
@@ -989,11 +989,11 @@ pub mod pallet {
 
 			let id = <Identity1Of<T>>::get(&xx).ok_or(Error::<T>::NoIdentity)?;
 
-            let hashtoset = Data::BlakeTwo256(blake2_256(&referal.clone()));
+            let hashtoset = Data::Sha256(sha2_256(&referal.clone()));
 
             let mut info = id.info;
 
-            info.riot  =  hashtoset;
+            info.referalhash  =  hashtoset;
 
 
             let reg = RegistrationSel {
@@ -1037,15 +1037,15 @@ pub mod pallet {
 
 			let id = <Identity1Of<T>>::get(&xx).ok_or(Error::<T>::NoIdentity)?;
 
-            let hashtocheck = Data::BlakeTwo256(blake2_256(&referal.clone()));
+            let hashtocheck = Data::Sha256(sha2_256(&referal.clone()));
 
             let mut info = id.info;
 
-            ensure!(info.riot == hashtocheck , Error::<T>::ReferalFailed);
+            ensure!(info.referalhash == hashtocheck , Error::<T>::ReferalFailed);
 
 
             // Remove referal 
-            info.riot  =  Data::Raw(b"null".to_vec().try_into().unwrap());
+            info.referalhash  =  Data::Raw(b"null".to_vec().try_into().unwrap());
 
 
             let reg = RegistrationSel {
@@ -1071,6 +1071,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			email: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
+            // let key = Origin::signed(1);
             
 			let sender = ensure_signed(origin)?;
 

@@ -4,7 +4,7 @@
 pub use pallet::*;
 
 pub use orml_nft;
-
+mod nfttrait;
 
 
 #[frame_support::pallet]
@@ -12,6 +12,7 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
     use frame_support::traits::Currency;
+    use crate::nfttrait::NFT;
 	use sp_std::vec::Vec; // Step 3.1 will include this in `Cargo.toml`
 
 	#[pallet::config]  // <-- Step 2. code block will replace this.
@@ -19,7 +20,8 @@ pub mod pallet {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type LocalLooseCurrency: Currency<Self::AccountId>;
-//        type Looseormlnft: orml_nft::Config;
+
+//         type Looseormlnft: NFT<Self::AccountId>;
 
 
 	}
@@ -246,14 +248,15 @@ pub mod pallet {
 			Ok(())
 		}
 
-/*
+
 		#[pallet::weight(20_000)]
 		pub fn create_nft(origin  : OriginFor<T>, 
-                    _metadata: Vec<u8> , 
+                    metadata: Vec<u8> , 
                     data: () ) -> DispatchResult{
 
 			let who = ensure_signed(origin)?;
-			//let res =  orml_nft::Pallet<T>::create_class(&who,metadata.clone(),data);
+            //tokens
+			//let res =  Pallet::<T>::nftmodule::create_class(&who,metadata.clone(),data);
 			//NftClassId::<T>::insert(&who, (&who, &metadata ));
 			//NftTokenMetaData::<T>::insert(&who, (&who, metadata.clone()));
 			// <NftClassId<T>>::insert(&who,res.unwrap());
@@ -262,7 +265,7 @@ pub mod pallet {
 			Ok(())
 		}
 
-*/
+
 /*
 #[weight = 10_000 + T::DbWeight::get().writes(1)]
 		pub fn mint_nft(origin, data: <T as orml_nft::Trait>::TokenData) -> dispatch::DispatchResult{
