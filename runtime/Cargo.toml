@@ -230,6 +230,7 @@ version = '4.0.0-dev'
 [dependencies]
 serde = { version = "1.0.119", optional = true, features = ["derive"] }
 orml-nft = {default-features = false, version = '0.4.1-dev', path = '../../open-runtime-module-library/nft' }
+orml-traits = {default-features = false, version = '0.4.1-dev', path = '../../open-runtime-module-library/traits' }
 
 
 
@@ -256,6 +257,7 @@ std = [
     'frame-system/std',
     'pallet-aura/std',
     'orml-nft/std',
+    'orml-traits/std',
     'pallet-balances/std',
     'pallet-nicks/std',
     'pallet-identitysel/std',

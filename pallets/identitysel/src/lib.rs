@@ -78,16 +78,21 @@ mod tests;
 mod types;
 pub mod weights;
 
+use codec::{Decode, Encode, MaxEncodedLen};
+
 use sp_io::hashing::{sha2_256, blake2_128, blake2_256, twox_128, twox_256, twox_64};
 
 use frame_support::traits::{BalanceStatus, Currency, OnUnbalanced, ReservableCurrency};
-use sp_runtime::traits::{AppendZerosInput, Saturating, 
+use sp_runtime::traits::{AppendZerosInput, Saturating,  AtLeast32BitUnsigned,
     AccountIdConversion,
         AtLeast32Bit,
         MaybeSerializeDeserialize,
         Member,
     StaticLookup, Zero};
+use sp_runtime::{RuntimeDebug};
+
 use sp_std::prelude::*;
+use scale_info::TypeInfo;
 
 pub use weights::WeightInfo;
 use sp_std::{
@@ -109,6 +114,17 @@ type NegativeImbalanceOf<T> = <<T as Config>::Currency as Currency<
 
 pub type UseridentityIndex = u32;
 
+/// Token info
+#[derive(Encode, Decode, Clone, Eq, PartialEq, MaxEncodedLen, RuntimeDebug, TypeInfo)]
+pub struct TokenInfo<AccountId, Data, TokenMetadataOf> {
+	/// Token metadata
+	pub metadata: TokenMetadataOf,
+	/// Token owner
+	pub owner: AccountId,
+	/// Token Properties
+	pub data: Data,
+}
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -126,6 +142,13 @@ pub mod pallet {
 		/// The amount held on deposit for a registered identity
 		#[pallet::constant]
 		type BasicDeposit: Get<BalanceOf<Self>>;
+
+        /// The token ID type
+		type TokenId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy+ MaxEncodedLen;
+		/// The token properties type
+		type TokenData: Parameter + Member + MaybeSerializeDeserialize + MaxEncodedLen;
+		/// The maximum size of a class's metadata
+		type MaxAccessTokenMetadata: Get<u32>;
 
 		/// The amount held on deposit per additional field for a registered identity.
 		#[pallet::constant]
@@ -173,11 +196,25 @@ pub mod pallet {
 
 
 
+
+
+	pub type TokenMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxAccessTokenMetadata>;
+	pub type TokenInfoOf<T> =
+		TokenInfo<<T as frame_system::Config>::AccountId, <T as Config>::TokenData, TokenMetadataOf<T>>;
+
+
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
     #[pallet::generate_storage_info]
 	pub struct Pallet<T>(_);
 
+    /// Store token info.
+	/// Access tokens, access for which class
+	/// Returns `None` if token info not set or removed.
+	#[pallet::storage]
+	#[pallet::getter(fn tokens)]
+	pub type Tokens<T: Config> =
+		StorageMap<_, Twox64Concat,  T::TokenId, TokenInfoOf<T>>;
 
 
 

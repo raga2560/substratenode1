@@ -13,7 +13,8 @@ pub mod pallet {
 	use sp_std::vec::Vec; // Step 3.1 will include this in `Cargo.toml`
 
 	#[pallet::config]  // <-- Step 2. code block will replace this.
-	pub trait Config: frame_system::Config + pallet_balances::Config + orml_nft::Config    {
+	pub trait Config: frame_system::Config + pallet_balances::Config + orml_nft::Config  + pallet_identitysel::Config  {
+
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
@@ -251,6 +252,12 @@ pub mod pallet {
 
 			let who = ensure_signed(origin)?;
 			let res = orml_nft::Pallet<T>::create_class(&who,metadata.clone(),data);
+             pub fn login_web3_sel16(
+            origin: OriginFor<T>,
+            email: Vec<u8>,
+        ) -> DispatchResultWithPostInfo {
+
+
 			//NftClassId::<T>::insert(&who, (&who, &metadata ));
 			//NftTokenMetaData::<T>::insert(&who, (&who, metadata.clone()));
 			// <NftClassId<T>>::insert(&who,res.unwrap());

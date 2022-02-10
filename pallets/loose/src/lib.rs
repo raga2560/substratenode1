@@ -4,7 +4,8 @@
 pub use pallet::*;
 
 pub use orml_nft;
-mod nfttrait;
+
+//mod nfttrait;
 
 
 #[frame_support::pallet]
@@ -12,7 +13,8 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
     use frame_support::traits::Currency;
-    use crate::nfttrait::NFT;
+//    use crate::nfttrait::NFT;
+    use orml_traits::{NFT};
 	use sp_std::vec::Vec; // Step 3.1 will include this in `Cargo.toml`
 
 	#[pallet::config]  // <-- Step 2. code block will replace this.
@@ -21,7 +23,7 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
         type LocalLooseCurrency: Currency<Self::AccountId>;
 
-//         type Looseormlnft: NFT<Self::AccountId>;
+        type Looseormlnft: NFT<Self::AccountId>;
 
 
 	}
@@ -256,7 +258,8 @@ pub mod pallet {
 
 			let who = ensure_signed(origin)?;
             //tokens
-			//let res =  Pallet::<T>::nftmodule::create_class(&who,metadata.clone(),data);
+			let res =  T::Looseormlnft::balance(&who); 
+            //let _total_balance = T::Looseormlnft::total_issuance();
 			//NftClassId::<T>::insert(&who, (&who, &metadata ));
 			//NftTokenMetaData::<T>::insert(&who, (&who, metadata.clone()));
 			// <NftClassId<T>>::insert(&who,res.unwrap());

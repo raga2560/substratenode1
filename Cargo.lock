@@ -3570,6 +3570,7 @@ dependencies = [
  "frame-system-rpc-runtime-api",
  "hex-literal",
  "orml-nft",
+ "orml-traits",
  "pallet-aura",
  "pallet-balances",
  "pallet-crowd",
@@ -3750,9 +3751,39 @@ version = "0.4.1-dev"
 dependencies = [
  "frame-support",
  "frame-system",
+ "orml-traits",
  "parity-scale-codec",
  "scale-info",
  "serde",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "orml-traits"
+version = "0.4.1-dev"
+dependencies = [
+ "frame-support",
+ "impl-trait-for-tuples",
+ "num-traits",
+ "orml-utilities",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "orml-utilities"
+version = "0.4.1-dev"
+dependencies = [
+ "frame-support",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-io",
  "sp-runtime",
  "sp-std",
 ]
@@ -3896,6 +3927,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "orml-nft",
+ "orml-traits",
  "parity-scale-codec",
  "scale-info",
  "serde",

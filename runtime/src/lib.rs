@@ -32,7 +32,7 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
-
+use orml_traits::{NFT};
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -356,6 +356,7 @@ parameter_types! {
 ord_parameter_types! {
     pub const One: u64 = 1;
     pub const Two: u64 = 2;
+	pub const MaxAccessTokenMetadata: u32 = 1;
 }
 type EnsureOneOrRoot = EnsureOneOf<AccountId, EnsureRoot<u64>, EnsureSignedBy<One, u64>>;
 type EnsureTwoOrRoot = EnsureOneOf<AccountId, EnsureRoot<u64>, EnsureSignedBy<Two, u64>>;
@@ -372,6 +373,10 @@ impl pallet_identitysel::Config for Runtime {
     type MaxUseridentities = MaxUseridentities;
     type MaxRegistrars = MaxRegistrars;
     type MaxEmailsize = MaxEmailsize;
+    type TokenId = u64;
+    type TokenData = ();
+    type MaxAccessTokenMetadata = MaxAccessTokenMetadata;
+
     type RegistrarOrigin = frame_system::EnsureRoot<AccountId>; //EnsureOneOrRoot;
     type ForceOrigin = frame_system::EnsureRoot<AccountId>; //EnsureTwoOrRoot;
     type WeightInfo = ();
@@ -421,7 +426,7 @@ impl pallet_crowd::Config for Runtime {
 impl pallet_loose::Config for Runtime {
 	type Event = Event;
     type LocalLooseCurrency = Balances;
-    // type Looseormlnft = NFT;
+     type Looseormlnft = NFT1;
 }
 
 parameter_types! {
@@ -454,7 +459,7 @@ construct_runtime!(
         Nicks: pallet_nicks::{Pallet, Call, Storage, Event<T>},
 		TransactionPayment: pallet_transaction_payment::{Pallet, Storage},
 		Sudo: pallet_sudo::{Pallet, Call, Config<T>, Storage, Event<T>},
-        NFT: orml_nft::{Pallet, Call,   Storage},
+        NFT1: orml_nft::{Pallet, Call,    Storage},
 
 		// Include the custom logic from the pallet-template in the runtime.
 		//Tokens: orml_tokens::{Pallet,  Storage, Event<T>, Config<T>},
