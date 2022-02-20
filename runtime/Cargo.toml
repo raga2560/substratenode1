@@ -17,6 +17,11 @@ default-features = false
 path = '../pallets/identitysel'
 version = '4.0.0-dev'                  
 
+[dependencies.pallet-docverify]
+default-features = false
+path = '../pallets/docverify'
+version = '3.0.0'                  
+
 [dependencies.pallet-kitty]
 default-features = false
 path = '../pallets/kitty'
@@ -261,6 +266,7 @@ std = [
     'pallet-balances/std',
     'pallet-nicks/std',
     'pallet-identitysel/std',
+    'pallet-docverify/std',
     'pallet-grandpa/std',
     'pallet-randomness-collective-flip/std',
     'pallet-sudo/std',

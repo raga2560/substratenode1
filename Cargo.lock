@@ -3574,6 +3574,7 @@ dependencies = [
  "pallet-aura",
  "pallet-balances",
  "pallet-crowd",
+ "pallet-docverify",
  "pallet-grandpa",
  "pallet-identitysel",
  "pallet-kitty",
@@ -3861,6 +3862,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-docverify"
+version = "3.0.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "orml-nft",
+ "pallet-balances",
+ "pallet-identitysel",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-grandpa"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate.git?tag=monthly-2021-10#bf9683eee40f82cc4e01a05cd375b0e8bba3c8ef"
@@ -4022,6 +4042,25 @@ dependencies = [
  "frame-support",
  "frame-system",
  "orml-nft",
+ "parity-scale-codec",
+ "scale-info",
+ "serde",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "pallet-tight"
+version = "3.0.0"
+dependencies = [
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "orml-nft",
+ "pallet-balances",
+ "pallet-identitysel",
  "parity-scale-codec",
  "scale-info",
  "serde",

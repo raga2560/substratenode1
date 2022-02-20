@@ -8,5 +8,7 @@ members = [
     'pallets/rewardcoin',
     'pallets/identitysel',
     'pallets/loose',
+    'pallets/tight',
+    'pallets/docverify',
     'runtime',
 ]

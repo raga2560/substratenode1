@@ -89,7 +89,7 @@ use sp_runtime::traits::{AppendZerosInput, Saturating,  AtLeast32BitUnsigned,
         MaybeSerializeDeserialize,
         Member,
     StaticLookup, Zero};
-use sp_runtime::{RuntimeDebug};
+use sp_runtime::{RuntimeDebug,DispatchError };
 
 use sp_std::prelude::*;
 use scale_info::TypeInfo;
@@ -143,10 +143,6 @@ pub mod pallet {
 		#[pallet::constant]
 		type BasicDeposit: Get<BalanceOf<Self>>;
 
-        /// The token ID type
-		type TokenId: Parameter + Member + AtLeast32BitUnsigned + Default + Copy+ MaxEncodedLen;
-		/// The token properties type
-		type TokenData: Parameter + Member + MaybeSerializeDeserialize + MaxEncodedLen;
 		/// The maximum size of a class's metadata
 		type MaxAccessTokenMetadata: Get<u32>;
 
@@ -176,6 +172,8 @@ pub mod pallet {
 
 		type MaxEmailsize: Get<u32>;
 
+		type MaxTokenid: Get<u32>;
+
 		type MaxUseridentities: Get<u32>;
 		/// What to do with slashed funds.
 		type Slashed: OnUnbalanced<NegativeImbalanceOf<Self>>;
@@ -196,11 +194,13 @@ pub mod pallet {
 
 
 
+    pub type TokenId<T> = BoundedVec<u8, <T as Config>::MaxTokenid> ;
 
+    pub type Email<T> =  BoundedVec<u8, <T as  Config>::MaxEmailsize>;
 
 	pub type TokenMetadataOf<T> = BoundedVec<u8, <T as Config>::MaxAccessTokenMetadata>;
 	pub type TokenInfoOf<T> =
-		TokenInfo<<T as frame_system::Config>::AccountId, <T as Config>::TokenData, TokenMetadataOf<T>>;
+		TokenInfo<<T as frame_system::Config>::AccountId,  Data, TokenMetadataOf<T>>;
 
 
 	#[pallet::pallet]
@@ -208,15 +208,20 @@ pub mod pallet {
     #[pallet::generate_storage_info]
 	pub struct Pallet<T>(_);
 
-    /// Store token info.
-	/// Access tokens, access for which class
+
+
+	/// testing
+	/// Access tokens if needed, access for which services
 	/// Returns `None` if token info not set or removed.
 	#[pallet::storage]
 	#[pallet::getter(fn tokens)]
 	pub type Tokens<T: Config> =
-		StorageMap<_, Twox64Concat,  T::TokenId, TokenInfoOf<T>>;
+		StorageMap<_, Twox64Concat,  TokenId<T>, TokenInfoOf<T>>;
 
-
+	#[pallet::storage]
+	#[pallet::getter(fn emailid)]
+	pub type EmailId<T: Config> =
+		StorageMap<_, Twox64Concat,  T::AccountId, Email<T>>;
 
 	/// Information that is pertinent to identify the entity behind an account.
 	///
@@ -297,6 +302,10 @@ pub mod pallet {
         ReferalFailed,
 
         LoginFailed,
+
+        MaxMetadataExceeded,
+
+        ServiceAccessFailed,
 
 		/// Too many subs-accounts.
 		TooManySubAccounts,
@@ -1086,7 +1095,7 @@ pub mod pallet {
 
 
             let reg = RegistrationSel {
-                    accountId: sender,
+                    accountId: sender.clone(),
                     info: info,
                     judgements: BoundedVec::default(),
                     deposit: Zero::zero(),
@@ -1094,7 +1103,8 @@ pub mod pallet {
                 };
 
             
-			<Identity1Of<T>>::insert(xx, reg);
+			<Identity1Of<T>>::insert(xx.clone(), reg);
+            <EmailId<T>>::insert(sender, xx);
 
 			Ok(Some(T::WeightInfo::request_judgement(10 as u32, 5 as u32))
 				.into())
@@ -1107,7 +1117,7 @@ pub mod pallet {
 		pub fn login_web3_sel16(
 			origin: OriginFor<T>,
 			email: Vec<u8>,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult{
             // let key = Origin::signed(1);
             
 			let sender = ensure_signed(origin)?;
@@ -1118,11 +1128,94 @@ pub mod pallet {
 			let id = <Identity1Of<T>>::get(&xx).ok_or(Error::<T>::NoIdentity)?;
             ensure!(sender == id.accountId , Error::<T>::LoginFailed);
 
+            let tokenid : TokenId<T> =   email.clone().try_into().unwrap();
+            /*
 
-			Ok(Some(T::WeightInfo::request_judgement(10 as u32, 5 as u32))
-				.into())
+            let bounded_metadata: BoundedVec<u8, T::MaxAccessTokenMetadata> =
+				email.clone().try_into().map_err(|_| Error::<T>::MaxMetadataExceeded)?;
+            let tokendata :  Data =  Data::Raw(email.try_into().unwrap() );
+
+            let tokeninfo = TokenInfo {
+			  metadata: bounded_metadata,  //access reason etc
+			  owner: sender.clone(),
+			  data: tokendata     ,
+            };
+
+            Tokens::<T>::insert(tokenid, tokeninfo);
+            */
+//            Tokens::<T>::insert(tokenid, tokeninfo);
+
+			Ok(())
+//			Ok(Some(T::WeightInfo::request_judgement(10 as u32, 5 as u32))
+//				.into())
 		}
 
+
+         #[pallet::weight(T::WeightInfo::request_judgement(
+            T::MaxRegistrars::get().into(), // R
+            T::MaxAdditionalFields::get().into(), // X
+        ))]
+        pub fn set_accessservice_sel17(
+            origin: OriginFor<T>,
+			idtoaccess: T::AccountId,
+            service: Vec<u8>,
+        ) -> DispatchResultWithPostInfo {
+
+            let sender = ensure_signed(origin)?;
+
+            let email = <EmailId<T>>::get(idtoaccess.clone()).ok_or(Error::<T>::NoIdentity)?;
+
+            let xx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
+
+            let id = <Identity1Of<T>>::get(&xx).ok_or(Error::<T>::NoIdentity)?;
+
+            let web = Data::Raw(service.try_into().unwrap());
+
+            let mut info = id.info;
+
+            info.web  =  web;
+
+
+            let reg = RegistrationSel {
+                    accountId: id.accountId,
+                    info: info,
+                    judgements: BoundedVec::default(),
+                    deposit: Zero::zero(),
+
+                };
+
+
+            <Identity1Of<T>>::insert(xx, reg);
+
+            Ok(Some(T::WeightInfo::request_judgement(10 as u32, 5 as u32))
+                .into())
+        }
+
+          #[pallet::weight(T::WeightInfo::request_judgement(
+            T::MaxRegistrars::get().into(), // R
+            T::MaxAdditionalFields::get().into(), // X
+        ))]
+        pub fn check_web3access_sel18(
+            origin: OriginFor<T>,
+            service: Vec<u8>,
+        ) -> DispatchResult{
+            // let key = Origin::signed(1);
+
+            let sender = ensure_signed(origin)?;
+
+            let email = <EmailId<T>>::get(sender.clone()).ok_or(Error::<T>::NoIdentity)?;
+
+            let xx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
+
+            let id = <Identity1Of<T>>::get(&xx).ok_or(Error::<T>::NoIdentity)?;
+          
+            let servicetocheck = Data::Raw(service.try_into().unwrap());
+            let info = id.info;
+            
+            ensure!(servicetocheck == info.web , Error::<T>::ServiceAccessFailed);
+
+            Ok(())
+        }
 
 		/// Cancel a previous request.
 		///

@@ -351,6 +351,7 @@ parameter_types! {
     pub const MaxAdditionalFields: u32 = 5; 
     pub const MaxRegistrars: u32 = 20;
     pub const MaxEmailsize: u32 = 30;
+    pub const MaxTokenid: u32 = 30;
     pub const MaxUseridentities: u32 = 20;
 }
 ord_parameter_types! {
@@ -373,9 +374,8 @@ impl pallet_identitysel::Config for Runtime {
     type MaxUseridentities = MaxUseridentities;
     type MaxRegistrars = MaxRegistrars;
     type MaxEmailsize = MaxEmailsize;
-    type TokenId = u64;
-    type TokenData = ();
     type MaxAccessTokenMetadata = MaxAccessTokenMetadata;
+    type MaxTokenid = MaxTokenid;
 
     type RegistrarOrigin = frame_system::EnsureRoot<AccountId>; //EnsureOneOrRoot;
     type ForceOrigin = frame_system::EnsureRoot<AccountId>; //EnsureTwoOrRoot;
@@ -407,6 +407,10 @@ impl pallet_kitty::Config for Runtime {
 	type MaxKittyOwned = MaxKittyOwned;
 }
 
+impl pallet_docverify::Config for Runtime {
+	type Event = Event;
+
+}
 
 parameter_types! {
     pub const  SubmissionDeposit: u128 = 100;              
@@ -468,6 +472,7 @@ construct_runtime!(
         LooseTemplateModule: pallet_loose::{Pallet, Call, Storage, Event<T>},
 		subkitty: pallet_kitty::{Pallet, Call, Storage, Event<T>},
         Identity: pallet_identitysel::{Pallet, Call,  Storage, Event<T>},
+        Docverify: pallet_docverify::{Pallet, Call,  Storage, Event<T>},
 	}
 );
 

@@ -2,7 +2,10 @@
 
 // Re-export pallet items so that they can be accessed from the crate namespace.
 pub use pallet::*;
+//use parity_scale_codec::Encode;
 
+mod mocks;
+mod tests;
 
 
 
@@ -10,10 +13,14 @@ pub use pallet::*;
 pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
+use sp_core::{Pair, Public};
+use sp_runtime::traits::{IdentifyAccount, SignedExtension, Verify };
+use sp_runtime::{ MultiSignature };
+//	use pallet_identitysel::*;
 	use sp_std::vec::Vec; // Step 3.1 will include this in `Cargo.toml`
 
 	#[pallet::config]  // <-- Step 2. code block will replace this.
-	pub trait Config: frame_system::Config + pallet_balances::Config + orml_nft::Config  + pallet_identitysel::Config  {
+	pub trait Config: frame_system::Config + pallet_balances::Config + pallet_identitysel::Config  {
 
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -21,7 +28,14 @@ pub mod pallet {
 
 	}
 
+     pub type Verifier<T> = <T as frame_system::Config>::AccountId;
+     pub type Submitter<T> = <T as frame_system::Config>::AccountId;
+     pub type DocumentHash = Vec<u8>;
+     pub type DocumentStatus = Vec<u8>;
+     pub type DocumentLink = Vec<u8>;
 
+pub type Signature = MultiSignature;
+pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
 	#[pallet::event]   // <-- Step 3. code block will replace this.
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
@@ -62,13 +76,13 @@ pub mod pallet {
 	pub struct Pallet<T>(_);
 
 	#[pallet::storage] // <-- Step 5. code block will replace this.
-	pub(super) type Proofs<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, (T::AccountId, T::BlockNumber), ValueQuery>;
+	pub(super) type Proofs<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, (T::AccountId, T::BlockNumber  ), ValueQuery>;
 
 	#[pallet::storage] // <-- Step 5. code block will replace this.
 	pub(super) type P2shaddress<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, (T::AccountId, T::BlockNumber), ValueQuery>;
 
 	#[pallet::storage] // <-- Step 5. code block will replace this.
-	pub(super) type Prooflocks<T: Config> = StorageMap<_, Blake2_128Concat, Vec<u8>, (T::AccountId, Vec<u8> ), ValueQuery>;
+	pub(super) type Documentverify<T: Config> = StorageMap<_, Blake2_128Concat, DocumentHash, (Submitter<T> , Verifier<T>, DocumentLink, DocumentStatus ), ValueQuery>;
 
     /*
 	#[pallet::storage] // <-- Step 5. code block will replace this.
@@ -87,16 +101,17 @@ pub mod pallet {
 	#[pallet::call]   // <-- Step 6. code block will replace this.
 	impl<T: Config> Pallet<T> {
 		#[pallet::weight(1_000)]
-		pub fn create_claim(
+		pub fn document_submit_sel31(
 			origin: OriginFor<T>,
 			proof: Vec<u8>,
 		) -> DispatchResult {
 			// Check that the extrinsic was signed and get the signer.
 			// This function will return an error if the extrinsic is not signed.
 			// https://docs.substrate.io/v3/runtime/origins
+//           let signer : AccountId = <<origin as Verify>::Signer as IdentifyAccount>::AccountId;
 			let sender = ensure_signed(origin)?;
 
-
+        //origin.sign(proof);
 
             // Verify that the specified proof has not already been claimed.
         ensure!(!Proofs::<T>::contains_key(&proof), Error::<T>::ProofAlreadyClaimed);
@@ -114,6 +129,45 @@ pub mod pallet {
 
 			Ok(())
 		}
+
+		#[pallet::weight(1_000)]
+		pub fn document_verify_sel32(
+			verifier: OriginFor<T>,
+			dochash: Vec<u8>,
+		) -> DispatchResult {
+
+            /*
+             *
+             * Checks if verifier has rights to verify
+             * Gets the document hash
+             * Then verifies
+             * Note:- Document link can be accessed outside this function.
+             * Some random person cannot verify
+             * */
+
+			Ok(())
+		}
+
+		#[pallet::weight(1_000)]
+		pub fn document_reject_sel33(
+			verifier: OriginFor<T>,
+			dochash: Vec<u8>,
+		) -> DispatchResult {
+
+            /*
+             *
+             * Checks if verifier has rights to verify
+             * Gets the document hash
+             * Then verifies
+             * Note:- Document link can be accessed outside this function.
+             *
+             * */
+
+			Ok(())
+		}
+
+
+			// Check that the extrinsic was signed and get the signer.
 /*
 		#[pallet::weight(1_000)]
 		pub fn update_claim(
@@ -182,7 +236,6 @@ pub mod pallet {
 
 			Ok(())
 		}
-        */
 
 		#[pallet::weight(1_000)]
 		pub fn create_pshaddress(
@@ -242,17 +295,25 @@ pub mod pallet {
 			Ok(())
 		}
 
+        */
 
 		#[pallet::weight(20_000)]
 		pub fn create_nft(origin  : OriginFor<T>, 
                     metadata: Vec<u8> , 
                     data: () ) -> DispatchResult{
+            let service: Vec<u8> = b"moodle".to_vec();
+			let id = pallet_identitysel::Pallet::<T>::check_web3access_sel18(origin.clone(), service);
 
-			let who = ensure_signed(origin)?;
+			let who = ensure_signed(origin.clone())?;
+			//let id = pallet_identitysel::Pallet::<T>::set_account_id(origin, 1, who.clone());
 			// let res = orml_nft::Pallet::<T>::create_class(&who,vec![1],() as <T as orml_nft::Config>::ClassData);
 //             let xx : BoundedVec<_,  pallet_identitysel::Pallet::<T>::Config::MaxEmailsize> = metadata.clone().try_into().unwrap();
 
-			let res1 = pallet_identitysel::Pallet::<T>::identity(who.clone());
+			let id = pallet_identitysel::Pallet::<T>::identity(who.clone());
+
+ //           id.accountId =  who.clone();
+//            <pallet_identitysel::Pallet::<T> as pallet_identitysel::Pallet::<T>::Config>::Identity1Of::insert(&who, id);
+
 
 			//let res1 = pallet_identitysel::MaxEmailsize;
             //IdentityOf
