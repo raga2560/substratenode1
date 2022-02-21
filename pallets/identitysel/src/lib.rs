@@ -25,20 +25,6 @@
 //! A federated naming system, allowing for multiple registrars to be added from a specified origin.
 //! Registrars can set a fee to provide identity-verification service. Anyone can put forth a
 //! proposed identity for a fixed deposit and ask for review by any number of registrars (paying
-//! each of their fees). Registrar judgements are given as an `enum`, allowing for sophisticated,
-//! multi-tier opinions.
-//!
-//! Some judgements are identified as *sticky*, which means they cannot be removed except by
-//! complete removal of the identity, or by the registrar. Judgements are allowed to represent a
-//! portion of funds that have been reserved for the registrar.
-//!
-//! A super-user can remove accounts and in doing so, slash the deposit.
-//!
-//! All accounts may also have a limited number of sub-accounts which may be specified by the owner;
-//! by definition, these have equivalent ownership and each has an individual name.
-//!
-//! The number of registrars should be limited, and the deposit made sufficiently large, to ensure
-//! no state-bloat attack is viable.
 //!
 //! ## Interface
 //!
@@ -47,15 +33,7 @@
 //! #### For general users
 //! * `set_identity` - Set the associated identity of an account; a small deposit is reserved if not
 //!   already taken.
-//! * `clear_identity` - Remove an account's associated identity; the deposit is returned.
-//! * `request_judgement` - Request a judgement from a registrar, paying a fee.
-//! * `cancel_request` - Cancel the previous request for a judgement.
-//!
 //! #### For general users with sub-identities
-//! * `set_subs` - Set the sub-accounts of an identity.
-//! * `add_sub` - Add a sub-identity to an identity.
-//! * `remove_sub` - Remove a sub-identity of an identity.
-//! * `rename_sub` - Rename a sub-identity of an identity.
 //! * `quit_sub` - Remove a sub-identity of an identity (called by the sub-identity).
 //!
 //! #### For registrars
@@ -394,493 +372,20 @@ pub mod pallet {
 	impl<T: Config> Pallet<T> {
 
 
-		#[pallet::weight(T::WeightInfo::add_registrar(T::MaxRegistrars::get()))]
-		pub fn user_register(
-			origin: OriginFor<T>,
-			email: Vec<u8>,     
-			password: Vec<u8>,     
-		) -> DispatchResult {
-
-            let testuser1 = b"user1@alpha.com";
-
-            let e1 : Vec<u8> = testuser1.to_vec().try_into().unwrap();
-
-            if e1 == email {
-			  Self::deposit_event(Event::UserRegistered { who: e1.clone() });
-//            } else if password == b"test" {
-
-//			  Self::deposit_event(Event::UserExists { who: e1.clone() });
-
-            } else {
-
-			  Self::deposit_event(Event::UserRegisterfailed { who: email.clone() });
-
-            }
-
-            Ok(())
-		}
-
-		#[pallet::weight(T::WeightInfo::add_registrar(T::MaxRegistrars::get()))]
-		pub fn user_loginallow(
-			origin: OriginFor<T>,
-			email: Vec<u8>,     
-			password: Vec<u8>,     
-		) -> DispatchResult {
-
-            let testuser1 = b"user1@alpha.com";
-
-            let e1 : Vec<u8> = testuser1.to_vec().try_into().unwrap();
-
-            let testuser1session = b"user1session0566".to_vec().try_into().unwrap();
-
-            if e1 == email {
-			  Self::deposit_event(Event::UserLoginsuccess { who: e1.clone(), blocksession: testuser1session });
-            } else if password == b"test" {
-
-			  Self::deposit_event(Event::UserLoginfailed { who: e1.clone() });
-
-            } else {
-
-			  Self::deposit_event(Event::UserDoesnotexist { who: e1.clone() });
-
-            }
-
-            Ok(())
-		}
-
-
-
-		#[pallet::weight(T::WeightInfo::add_registrar(T::MaxRegistrars::get()))]
-		pub fn user_web3register(
-			origin: OriginFor<T>,
-			email: Vec<u8>,     
-			reference: Vec<u8>,     
-		) -> DispatchResult {
-
-            let sender = ensure_signed(origin);
-            let testuser1 = b"user1@alpha.com";
-
-            let e1 : Vec<u8> = testuser1.to_vec().try_into().unwrap();
-
-            if e1 == email {
-			  Self::deposit_event(Event::UserWeb3registered { who: e1.clone() });
-            } else {
-
-			  Self::deposit_event(Event::UserWeb3registerfailed { who: e1.clone() });
-
-            }
-
-
-            Ok(())
-		}
-
-		#[pallet::weight(T::WeightInfo::add_registrar(T::MaxRegistrars::get()))]
-		pub fn user_web3loginallow(
-			origin: OriginFor<T>,
-			email: Vec<u8>,     
-		) -> DispatchResult {
-
-            let sender = ensure_signed(origin);
-
-            let testuser1 = b"user1@alpha.com";
-
-            let e1 : Vec<u8> = testuser1.to_vec().try_into().unwrap();
-
-            let testuser1session = b"user1session0566".to_vec().try_into().unwrap();
-
-            if e1 == email {
-			  Self::deposit_event(Event::UserWeb3doesnotexist { who: e1.clone() });
-            } else if email == b"test" {
-
-			  Self::deposit_event(Event::UserWeb3loginfailed { who: e1.clone() });
-
-            } else {
-
-			  Self::deposit_event(Event::UserWeb3loginsuccess { who: e1.clone(), blocksession: testuser1session });
-
-            }
-
-            Ok(())
-		}
-
-		/// Add a registrar to the system.
-		///
-		/// The dispatch origin for this call must be `T::RegistrarOrigin`.
-		///
-		/// - `account`: the account of the registrar.
-		///
-		/// Emits `RegistrarAdded` if successful.
-		///
-		/// # <weight>
-		/// - `O(R)` where `R` registrar-count (governance-bounded and code-bounded).
-		/// - One storage mutation (codec `O(R)`).
-		/// - One event.
-		/// # </weight>
-		#[pallet::weight(T::WeightInfo::add_registrar(T::MaxRegistrars::get()))]
-		pub fn add_registrar(
-			origin: OriginFor<T>,
-			account: T::AccountId,
-		) -> DispatchResultWithPostInfo {
-			T::RegistrarOrigin::ensure_origin(origin)?;
-
-			let (i, registrar_count) = <Registrars<T>>::try_mutate(
-				|registrars| -> Result<(RegistrarIndex, usize), DispatchError> {
-					registrars
-						.try_push(Some(RegistrarInfo {
-							account,
-							fee: Zero::zero(),
-							fields: Default::default(),
-						}))
-						.map_err(|_| Error::<T>::TooManyRegistrars)?;
-					Ok(((registrars.len() - 1) as RegistrarIndex, registrars.len()))
-				},
-			)?;
-
-			Self::deposit_event(Event::RegistrarAdded { registrar_index: i });
-
-			Ok(Some(T::WeightInfo::add_registrar(registrar_count as u32)).into())
-		}
-
-
-		#[pallet::weight(T::WeightInfo::add_useridentity(T::MaxRegistrars::get()))]
-		pub fn add_useridentity_tmp(
-			origin: OriginFor<T>,
-			email: Vec<u8>,     
-			password: Vec<u8>,     
-		) -> DispatchResultWithPostInfo {
-			T::RegistrarOrigin::ensure_origin(origin)?;
-
-
-// let data = vec![0; 32];
-// let data1: Data = Data::Raw(data.try_into().unwrap());
-
-        let add: BoundedVec<_, T::MaxAdditionalFields> = vec![
-                    (
-                        Data::Raw(b"number".to_vec().try_into().unwrap()),
-                        Data::Raw(10u32.encode().try_into().unwrap())
-                    ),
-                    (
-                        Data::Raw(b"text".to_vec().try_into().unwrap()),
-                        Data::Raw(b"10".to_vec().try_into().unwrap())
-                    ),
-                ]
-                .try_into()
-                .unwrap();
-
-            
-			let (i, useridentity_count) = <Useridentities<T>>::try_mutate(
-				|useridentities| -> Result<(UseridentityIndex, usize), DispatchError> {
-					useridentities
-						.try_push(Some(
-
-    IdentityInfo {
-        display: Data::Raw(b"ten".to_vec().try_into().unwrap()),
-        legal: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-        image: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-        web: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-        riot: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-        email: Data::Raw(email.try_into().unwrap()),
-        twitter: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-        pgp_fingerprint: None,
-        additional: add
-    }
-
-                                ))
-
-						.map_err(|_| Error::<T>::TooManyUseridentities)?;
-					Ok(((useridentities.len() - 1) as UseridentityIndex, useridentities.len()))
-				},
-			)?;
-
-			Self::deposit_event(Event::UseridentityAdded { useridentity_index: i });
-
-			Ok(Some(T::WeightInfo::add_useridentity(useridentity_count as u32)).into())
-		}
-        
-
-		/// Set an account's identity information and reserve the appropriate deposit.
-		///
-		/// If the account already has identity information, the deposit is taken as part payment
-		/// for the new deposit.
-		///
-		/// The dispatch origin for this call must be _Signed_.
-		///
-		/// - `info`: The identity information.
-		///
-		/// Emits `IdentitySet` if successful.
-		///
-		/// # <weight>
-		/// - `O(X + X' + R)`
-		///   - where `X` additional-field-count (deposit-bounded and code-bounded)
-		///   - where `R` judgements-count (registrar-count-bounded)
-		/// - One balance reserve operation.
-		/// - One storage mutation (codec-read `O(X' + R)`, codec-write `O(X + R)`).
-		/// - One event.
-		/// # </weight>
-		#[pallet::weight( T::WeightInfo::set_identity(
-			T::MaxRegistrars::get().into(), // R
-			T::MaxAdditionalFields::get().into(), // X
-		))]
-		pub fn set_identity(
-			origin: OriginFor<T>,
-			info: Box<IdentityInfo<T::MaxAdditionalFields>>,
-		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			let extra_fields = info.additional.len() as u32;
-			ensure!(extra_fields <= T::MaxAdditionalFields::get(), Error::<T>::TooManyFields);
-			let fd = <BalanceOf<T>>::from(extra_fields) * T::FieldDeposit::get();
-
-			let mut id = match <IdentityOf<T>>::get(&sender) {
-				Some(mut id) => {
-					// Only keep non-positive judgements.
-					id.judgements.retain(|j| j.1.is_sticky());
-					id.info = *info;
-					id
-				},
-				None => Registration {
-					info: *info,
-					judgements: BoundedVec::default(),
-					deposit: Zero::zero(),
-				},
-			};
-
-			let old_deposit = id.deposit;
-			id.deposit = T::BasicDeposit::get() + fd;
-			if id.deposit > old_deposit {
-				T::Currency::reserve(&sender, id.deposit - old_deposit)?;
-			}
-			if old_deposit > id.deposit {
-				let err_amount = T::Currency::unreserve(&sender, old_deposit - id.deposit);
-				debug_assert!(err_amount.is_zero());
-			}
-
-			let judgements = id.judgements.len();
-			<IdentityOf<T>>::insert(&sender, id);
-			Self::deposit_event(Event::IdentitySet { who: sender });
-
-			Ok(Some(T::WeightInfo::set_identity(
-				judgements as u32, // R
-				extra_fields,      // X
-			))
-			.into())
-		}
-
-		/// Set the sub-accounts of the sender.
-		///
-		/// Payment: Any aggregate balance reserved by previous `set_subs` calls will be returned
-		/// and an amount `SubAccountDeposit` will be reserved for each item in `subs`.
-		///
-		/// The dispatch origin for this call must be _Signed_ and the sender must have a registered
-		/// identity.
-		///
-		/// - `subs`: The identity's (new) sub-accounts.
-		///
-		/// # <weight>
-		/// - `O(P + S)`
-		///   - where `P` old-subs-count (hard- and deposit-bounded).
-		///   - where `S` subs-count (hard- and deposit-bounded).
-		/// - At most one balance operations.
-		/// - DB:
-		///   - `P + S` storage mutations (codec complexity `O(1)`)
-		///   - One storage read (codec complexity `O(P)`).
-		///   - One storage write (codec complexity `O(S)`).
-		///   - One storage-exists (`IdentityOf::contains_key`).
-		/// # </weight>
-		// TODO: This whole extrinsic screams "not optimized". For example we could
-		// filter any overlap between new and old subs, and avoid reading/writing
-		// to those values... We could also ideally avoid needing to write to
-		// N storage items for N sub accounts. Right now the weight on this function
-		// is a large overestimate due to the fact that it could potentially write
-		// to 2 x T::MaxSubAccounts::get().
-		#[pallet::weight(T::WeightInfo::set_subs_old(T::MaxSubAccounts::get()) // P: Assume max sub accounts removed.
-			.saturating_add(T::WeightInfo::set_subs_new(subs.len() as u32)) // S: Assume all subs are new.
-		)]
-		pub fn set_subs(
-			origin: OriginFor<T>,
-			subs: Vec<(T::AccountId, Data)>,
-		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			ensure!(<IdentityOf<T>>::contains_key(&sender), Error::<T>::NotFound);
-			ensure!(
-				subs.len() <= T::MaxSubAccounts::get() as usize,
-				Error::<T>::TooManySubAccounts
-			);
-
-			let (old_deposit, old_ids) = <SubsOf<T>>::get(&sender);
-			let new_deposit = T::SubAccountDeposit::get() * <BalanceOf<T>>::from(subs.len() as u32);
-
-			let not_other_sub =
-				subs.iter().filter_map(|i| SuperOf::<T>::get(&i.0)).all(|i| &i.0 == &sender);
-			ensure!(not_other_sub, Error::<T>::AlreadyClaimed);
-
-			if old_deposit < new_deposit {
-				T::Currency::reserve(&sender, new_deposit - old_deposit)?;
-			} else if old_deposit > new_deposit {
-				let err_amount = T::Currency::unreserve(&sender, old_deposit - new_deposit);
-				debug_assert!(err_amount.is_zero());
-			}
-			// do nothing if they're equal.
-
-			for s in old_ids.iter() {
-				<SuperOf<T>>::remove(s);
-			}
-			let mut ids = BoundedVec::<T::AccountId, T::MaxSubAccounts>::default();
-			for (id, name) in subs {
-				<SuperOf<T>>::insert(&id, (sender.clone(), name));
-				ids.try_push(id).expect("subs length is less than T::MaxSubAccounts; qed");
-			}
-			let new_subs = ids.len();
-
-			if ids.is_empty() {
-				<SubsOf<T>>::remove(&sender);
-			} else {
-				<SubsOf<T>>::insert(&sender, (new_deposit, ids));
-			}
-
-			Ok(Some(
-				T::WeightInfo::set_subs_old(old_ids.len() as u32) // P: Real number of old accounts removed.
-					// S: New subs added
-					.saturating_add(T::WeightInfo::set_subs_new(new_subs as u32)),
-			)
-			.into())
-		}
-
-		/// Clear an account's identity info and all sub-accounts and return all deposits.
-		///
-		/// Payment: All reserved balances on the account are returned.
-		///
-		/// The dispatch origin for this call must be _Signed_ and the sender must have a registered
-		/// identity.
-		///
-		/// Emits `IdentityCleared` if successful.
-		///
-		/// # <weight>
-		/// - `O(R + S + X)`
-		///   - where `R` registrar-count (governance-bounded).
-		///   - where `S` subs-count (hard- and deposit-bounded).
-		///   - where `X` additional-field-count (deposit-bounded and code-bounded).
-		/// - One balance-unreserve operation.
-		/// - `2` storage reads and `S + 2` storage deletions.
-		/// - One event.
-		/// # </weight>
-		#[pallet::weight(T::WeightInfo::clear_identity(
-			T::MaxRegistrars::get().into(), // R
-			T::MaxSubAccounts::get().into(), // S
-			T::MaxAdditionalFields::get().into(), // X
-		))]
-		pub fn clear_identity(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-
-			let (subs_deposit, sub_ids) = <SubsOf<T>>::take(&sender);
-			let id = <IdentityOf<T>>::take(&sender).ok_or(Error::<T>::NotNamed)?;
-			let deposit = id.total_deposit() + subs_deposit;
-			for sub in sub_ids.iter() {
-				<SuperOf<T>>::remove(sub);
-			}
-
-			let err_amount = T::Currency::unreserve(&sender, deposit.clone());
-			debug_assert!(err_amount.is_zero());
-
-			Self::deposit_event(Event::IdentityCleared { who: sender, deposit });
-
-			Ok(Some(T::WeightInfo::clear_identity(
-				id.judgements.len() as u32,      // R
-				sub_ids.len() as u32,            // S
-				id.info.additional.len() as u32, // X
-			))
-			.into())
-		}
-
-		/// Request a judgement from a registrar.
-		///
-		/// Payment: At most `max_fee` will be reserved for payment to the registrar if judgement
-		/// given.
-		///
-		/// The dispatch origin for this call must be _Signed_ and the sender must have a
-		/// registered identity.
-		///
-		/// - `reg_index`: The index of the registrar whose judgement is requested.
-		/// - `max_fee`: The maximum fee that may be paid. This should just be auto-populated as:
-		///
-		/// ```nocompile
-		/// Self::registrars().get(reg_index).unwrap().fee
-		/// ```
-		///
-		/// Emits `JudgementRequested` if successful.
-		///
-		/// # <weight>
-		/// - `O(R + X)`.
-		/// - One balance-reserve operation.
-		/// - Storage: 1 read `O(R)`, 1 mutate `O(X + R)`.
-		/// - One event.
-		/// # </weight>
-		#[pallet::weight(T::WeightInfo::request_judgement(
-			T::MaxRegistrars::get().into(), // R
-			T::MaxAdditionalFields::get().into(), // X
-		))]
-		pub fn request_judgement(
-			origin: OriginFor<T>,
-			#[pallet::compact] reg_index: RegistrarIndex,
-			#[pallet::compact] max_fee: BalanceOf<T>,
-		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			let registrars = <Registrars<T>>::get();
-			let registrar = registrars
-				.get(reg_index as usize)
-				.and_then(Option::as_ref)
-				.ok_or(Error::<T>::EmptyIndex)?;
-			ensure!(max_fee >= registrar.fee, Error::<T>::FeeChanged);
-			let mut id = <IdentityOf<T>>::get(&sender).ok_or(Error::<T>::NoIdentity)?;
-
-			let item = (reg_index, Judgement::FeePaid(registrar.fee));
-			match id.judgements.binary_search_by_key(&reg_index, |x| x.0) {
-				Ok(i) =>
-					if id.judgements[i].1.is_sticky() {
-						Err(Error::<T>::StickyJudgement)?
-					} else {
-						id.judgements[i] = item
-					},
-				Err(i) =>
-					id.judgements.try_insert(i, item).map_err(|_| Error::<T>::TooManyRegistrars)?,
-			}
-
-			T::Currency::reserve(&sender, registrar.fee)?;
-
-			let judgements = id.judgements.len();
-			let extra_fields = id.info.additional.len();
-			<IdentityOf<T>>::insert(&sender, id);
-
-			Self::deposit_event(Event::JudgementRequested {
-				who: sender,
-				registrar_index: reg_index,
-			});
-
-			Ok(Some(T::WeightInfo::request_judgement(judgements as u32, extra_fields as u32))
-				.into())
-		}
-
-
-		#[pallet::weight(T::WeightInfo::request_judgement(
-			T::MaxRegistrars::get().into(), // R
-			T::MaxAdditionalFields::get().into(), // X
-		))]
+        #[pallet::weight(1_000)]
 		pub fn request_registration_sel11(
 			origin: OriginFor<T>,
 			email: Vec<u8>,
 			password: Vec<u8>,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
          //   let _x2 = Pallet::<T>::test1(email.clone());
-            let xx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
+            let emailx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
         
-            ensure!(!Identity1Of::<T>::contains_key(&xx), Error::<T>::IdentityAlreadyClaimed);
+            ensure!(!Identity1Of::<T>::contains_key(&emailx), Error::<T>::IdentityAlreadyClaimed);
 
 
-                        // Data::Raw(origin.encode().try_into().unwrap());
-//            let xx = BoundedVec<_, T::MaxAdditionalFields>::try_from(email);
-
-			//let mut id = <Identity1Of<T>>::get(&xx).ok_or(Error::<T>::NoIdentity)?;
 
               let add: BoundedVec<_, T::MaxAdditionalFields> = vec![
                     (
@@ -896,7 +401,7 @@ pub mod pallet {
                 .unwrap();
 
 
-       let info =    IdentityInfoSel {
+        let info =  IdentityInfoSel {
         display: Data::Raw(b"ten".to_vec().try_into().unwrap()),
         legal: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
         image: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
@@ -907,62 +412,35 @@ pub mod pallet {
         pgp_fingerprint: None,
         account: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
         additional: add
-    };
+        };
 
 
-            let reg = RegistrationSel {
+        let reg = RegistrationSel {
                     accountId:sender, 
                     info: info,
                     judgements: BoundedVec::default(),
                     deposit: Zero::zero(),
-                };
+        };
 
-           /* 
-			let item = (reg_index, Judgement::FeePaid(registrar.fee));
-			match id.judgements.binary_search_by_key(&reg_index, |x| x.0) {
-				Ok(i) =>
-					if id.judgements[i].1.is_sticky() {
-						Err(Error::<T>::StickyJudgement)?
-					} else {
-						id.judgements[i] = item
-					},
-				Err(i) =>
-					id.judgements.try_insert(i, item).map_err(|_| Error::<T>::TooManyRegistrars)?,
-			}
-            */
-
-			//T::Currency::reserve(&sender, registrar.fee)?;
-         
-            //id.info = info;
             
-			<Identity1Of<T>>::insert(xx, reg);
-/*
-			Self::deposit_event(Event::JudgementRequested {
-				who: sender,
-				registrar_index: reg_index,
-			});
-            */
+			<Identity1Of<T>>::insert(emailx, reg);
 
-			Ok(Some(T::WeightInfo::request_judgement(10 as u32, 5 as u32))
-				.into())
+			Ok(())
 		}
 
 
 
-		#[pallet::weight(T::WeightInfo::request_judgement(
-			T::MaxRegistrars::get().into(), // R
-			T::MaxAdditionalFields::get().into(), // X
-		))]
+        #[pallet::weight(1_000)]
 		pub fn login_access_sel12(
 			origin: OriginFor<T>,
 			email: Vec<u8>,
 			password: Vec<u8>,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
-            let xx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
+            let emailx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
 
-			let id = <Identity1Of<T>>::get(&xx).ok_or(Error::<T>::NoIdentity)?;
+			let id = <Identity1Of<T>>::get(&emailx).ok_or(Error::<T>::NoIdentity)?;
 
             let info = id.info;
         
@@ -971,31 +449,22 @@ pub mod pallet {
             let passtocheck = Data::BlakeTwo256(blake2_256(&password.clone()));
 
             ensure!(info.passwordhash == passtocheck , Error::<T>::LoginFailed);
-            /*
-
-            
-			<Identity1Of<T>>::insert(xx, reg);
-*/
-			Ok(Some(T::WeightInfo::request_judgement(10 as u32, 5 as u32))
-				.into())
+			Ok(())
 		}
 
 
-		#[pallet::weight(T::WeightInfo::request_judgement(
-			T::MaxRegistrars::get().into(), // R
-			T::MaxAdditionalFields::get().into(), // X
-		))]
+        #[pallet::weight(1_000)]
 		pub fn change_password_sel13(
 			origin: OriginFor<T>,
 			email: Vec<u8>,
 			password: Vec<u8>,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
 
 			let sender = ensure_signed(origin)?;
 
-            let xx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
+            let emailx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
 
-			let id = <Identity1Of<T>>::get(&xx).ok_or(Error::<T>::NoIdentity)?;
+			let id = <Identity1Of<T>>::get(&emailx).ok_or(Error::<T>::NoIdentity)?;
 
             let mut info = id.info;
 
@@ -1010,30 +479,26 @@ pub mod pallet {
                     judgements: BoundedVec::default(),
                     deposit: Zero::zero(),
 
-                };
+            };
 
             
-			<Identity1Of<T>>::insert(xx, reg);
+			<Identity1Of<T>>::insert(emailx, reg);
 
-			Ok(Some(T::WeightInfo::request_judgement(10 as u32, 5 as u32))
-				.into())
+			Ok(())
 		}
 
-		#[pallet::weight(T::WeightInfo::request_judgement(
-			T::MaxRegistrars::get().into(), // R
-			T::MaxAdditionalFields::get().into(), // X
-		))]
+        #[pallet::weight(1_000)]
 		pub fn set_referal_sel12(
 			origin: OriginFor<T>,
 			email: Vec<u8>,
 			referal: Vec<u8>,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
             
 			let sender = ensure_signed(origin)?;
 
-            let xx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
+            let emailx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
 
-			let id = <Identity1Of<T>>::get(&xx).ok_or(Error::<T>::NoIdentity)?;
+			let id = <Identity1Of<T>>::get(&emailx).ok_or(Error::<T>::NoIdentity)?;
 
             let hashtoset = Data::Sha256(sha2_256(&referal.clone()));
 
@@ -1047,27 +512,22 @@ pub mod pallet {
                     info: info,
                     judgements: BoundedVec::default(),
                     deposit: Zero::zero(),
-
-                };
+            };
 
             
-			<Identity1Of<T>>::insert(xx, reg);
+			<Identity1Of<T>>::insert(emailx, reg);
 
-			Ok(Some(T::WeightInfo::request_judgement(10 as u32, 5 as u32))
-				.into())
+			Ok(())
 		}
 
 
-		#[pallet::weight(T::WeightInfo::request_judgement(
-			T::MaxRegistrars::get().into(), // R
-			T::MaxAdditionalFields::get().into(), // X
-		))]
+        #[pallet::weight(1_000)]
 		pub fn create_web3link_sel15(
 			origin: OriginFor<T>,
 			email: Vec<u8>,
 			idtolink: T::AccountId,
 			referal: Vec<u8>,
-		) -> DispatchResultWithPostInfo {
+		) -> DispatchResult {
             // We check if the signer is same as in email-id
             // Then update account-id of that record
             // That user would have received referal key, onlythen he can link 
@@ -1079,9 +539,9 @@ pub mod pallet {
 
             ensure!(sender == idtolink , Error::<T>::SignerNotmatching);
 
-            let xx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
+            let emailx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
 
-			let id = <Identity1Of<T>>::get(&xx).ok_or(Error::<T>::NoIdentity)?;
+			let id = <Identity1Of<T>>::get(&emailx).ok_or(Error::<T>::NoIdentity)?;
 
             let hashtocheck = Data::Sha256(sha2_256(&referal.clone()));
 
@@ -1099,21 +559,16 @@ pub mod pallet {
                     info: info,
                     judgements: BoundedVec::default(),
                     deposit: Zero::zero(),
-
-                };
+            };
 
             
-			<Identity1Of<T>>::insert(xx.clone(), reg);
-            <EmailId<T>>::insert(sender, xx);
+			<Identity1Of<T>>::insert(emailx.clone(), reg);
+            <EmailId<T>>::insert(sender, emailx);
 
-			Ok(Some(T::WeightInfo::request_judgement(10 as u32, 5 as u32))
-				.into())
+			Ok(())
 		}
 
-		#[pallet::weight(T::WeightInfo::request_judgement(
-			T::MaxRegistrars::get().into(), // R
-			T::MaxAdditionalFields::get().into(), // X
-		))]
+        #[pallet::weight(1_000)]
 		pub fn login_web3_sel16(
 			origin: OriginFor<T>,
 			email: Vec<u8>,
@@ -1123,51 +578,32 @@ pub mod pallet {
 			let sender = ensure_signed(origin)?;
 
 
-            let xx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
+            let emailx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
 
-			let id = <Identity1Of<T>>::get(&xx).ok_or(Error::<T>::NoIdentity)?;
+			let id = <Identity1Of<T>>::get(&emailx).ok_or(Error::<T>::NoIdentity)?;
             ensure!(sender == id.accountId , Error::<T>::LoginFailed);
 
             let tokenid : TokenId<T> =   email.clone().try_into().unwrap();
-            /*
 
-            let bounded_metadata: BoundedVec<u8, T::MaxAccessTokenMetadata> =
-				email.clone().try_into().map_err(|_| Error::<T>::MaxMetadataExceeded)?;
-            let tokendata :  Data =  Data::Raw(email.try_into().unwrap() );
-
-            let tokeninfo = TokenInfo {
-			  metadata: bounded_metadata,  //access reason etc
-			  owner: sender.clone(),
-			  data: tokendata     ,
-            };
-
-            Tokens::<T>::insert(tokenid, tokeninfo);
-            */
-//            Tokens::<T>::insert(tokenid, tokeninfo);
 
 			Ok(())
-//			Ok(Some(T::WeightInfo::request_judgement(10 as u32, 5 as u32))
-//				.into())
 		}
 
 
-         #[pallet::weight(T::WeightInfo::request_judgement(
-            T::MaxRegistrars::get().into(), // R
-            T::MaxAdditionalFields::get().into(), // X
-        ))]
+        #[pallet::weight(1_000)]
         pub fn set_accessservice_sel17(
             origin: OriginFor<T>,
 			idtoaccess: T::AccountId,
             service: Vec<u8>,
-        ) -> DispatchResultWithPostInfo {
+        ) -> DispatchResult {
 
             let sender = ensure_signed(origin)?;
 
             let email = <EmailId<T>>::get(idtoaccess.clone()).ok_or(Error::<T>::NoIdentity)?;
 
-            let xx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
+            let emailx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
 
-            let id = <Identity1Of<T>>::get(&xx).ok_or(Error::<T>::NoIdentity)?;
+            let id = <Identity1Of<T>>::get(&emailx).ok_or(Error::<T>::NoIdentity)?;
 
             let web = Data::Raw(service.try_into().unwrap());
 
@@ -1181,20 +617,15 @@ pub mod pallet {
                     info: info,
                     judgements: BoundedVec::default(),
                     deposit: Zero::zero(),
+            };
 
-                };
 
+            <Identity1Of<T>>::insert(emailx, reg);
 
-            <Identity1Of<T>>::insert(xx, reg);
-
-            Ok(Some(T::WeightInfo::request_judgement(10 as u32, 5 as u32))
-                .into())
+            Ok(())
         }
 
-          #[pallet::weight(T::WeightInfo::request_judgement(
-            T::MaxRegistrars::get().into(), // R
-            T::MaxAdditionalFields::get().into(), // X
-        ))]
+        #[pallet::weight(1_000)]
         pub fn check_web3access_sel18(
             origin: OriginFor<T>,
             service: Vec<u8>,
@@ -1205,9 +636,9 @@ pub mod pallet {
 
             let email = <EmailId<T>>::get(sender.clone()).ok_or(Error::<T>::NoIdentity)?;
 
-            let xx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
+            let emailx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
 
-            let id = <Identity1Of<T>>::get(&xx).ok_or(Error::<T>::NoIdentity)?;
+            let id = <Identity1Of<T>>::get(&emailx).ok_or(Error::<T>::NoIdentity)?;
           
             let servicetocheck = Data::Raw(service.try_into().unwrap());
             let info = id.info;
@@ -1217,476 +648,6 @@ pub mod pallet {
             Ok(())
         }
 
-		/// Cancel a previous request.
-		///
-		/// Payment: A previously reserved deposit is returned on success.
-		///
-		/// The dispatch origin for this call must be _Signed_ and the sender must have a
-		/// registered identity.
-		///
-		/// - `reg_index`: The index of the registrar whose judgement is no longer requested.
-		///
-		/// Emits `JudgementUnrequested` if successful.
-		///
-		/// # <weight>
-		/// - `O(R + X)`.
-		/// - One balance-reserve operation.
-		/// - One storage mutation `O(R + X)`.
-		/// - One event
-		/// # </weight>
-		#[pallet::weight(T::WeightInfo::cancel_request(
-			T::MaxRegistrars::get().into(), // R
-			T::MaxAdditionalFields::get().into(), // X
-		))]
-		pub fn cancel_request(
-			origin: OriginFor<T>,
-			reg_index: RegistrarIndex,
-		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			let mut id = <IdentityOf<T>>::get(&sender).ok_or(Error::<T>::NoIdentity)?;
-
-			let pos = id
-				.judgements
-				.binary_search_by_key(&reg_index, |x| x.0)
-				.map_err(|_| Error::<T>::NotFound)?;
-			let fee = if let Judgement::FeePaid(fee) = id.judgements.remove(pos).1 {
-				fee
-			} else {
-				Err(Error::<T>::JudgementGiven)?
-			};
-
-			let err_amount = T::Currency::unreserve(&sender, fee);
-			debug_assert!(err_amount.is_zero());
-			let judgements = id.judgements.len();
-			let extra_fields = id.info.additional.len();
-			<IdentityOf<T>>::insert(&sender, id);
-
-			Self::deposit_event(Event::JudgementUnrequested {
-				who: sender,
-				registrar_index: reg_index,
-			});
-
-			Ok(Some(T::WeightInfo::cancel_request(judgements as u32, extra_fields as u32)).into())
-		}
-
-		/// Set the fee required for a judgement to be requested from a registrar.
-		///
-		/// The dispatch origin for this call must be _Signed_ and the sender must be the account
-		/// of the registrar whose index is `index`.
-		///
-		/// - `index`: the index of the registrar whose fee is to be set.
-		/// - `fee`: the new fee.
-		///
-		/// # <weight>
-		/// - `O(R)`.
-		/// - One storage mutation `O(R)`.
-		/// - Benchmark: 7.315 + R * 0.329 µs (min squares analysis)
-		/// # </weight>
-		#[pallet::weight(T::WeightInfo::set_fee(T::MaxRegistrars::get()))] // R
-		pub fn set_fee(
-			origin: OriginFor<T>,
-			#[pallet::compact] index: RegistrarIndex,
-			#[pallet::compact] fee: BalanceOf<T>,
-		) -> DispatchResultWithPostInfo {
-			let who = ensure_signed(origin)?;
-
-			let registrars = <Registrars<T>>::mutate(|rs| -> Result<usize, DispatchError> {
-				rs.get_mut(index as usize)
-					.and_then(|x| x.as_mut())
-					.and_then(|r| {
-						if r.account == who {
-							r.fee = fee;
-							Some(())
-						} else {
-							None
-						}
-					})
-					.ok_or_else(|| DispatchError::from(Error::<T>::InvalidIndex))?;
-				Ok(rs.len())
-			})?;
-			Ok(Some(T::WeightInfo::set_fee(registrars as u32)).into()) // R
-		}
-
-		/// Change the account associated with a registrar.
-		///
-		/// The dispatch origin for this call must be _Signed_ and the sender must be the account
-		/// of the registrar whose index is `index`.
-		///
-		/// - `index`: the index of the registrar whose fee is to be set.
-		/// - `new`: the new account ID.
-		///
-		/// # <weight>
-		/// - `O(R)`.
-		/// - One storage mutation `O(R)`.
-		/// - Benchmark: 8.823 + R * 0.32 µs (min squares analysis)
-		/// # </weight>
-		#[pallet::weight(T::WeightInfo::set_account_id(T::MaxRegistrars::get()))] // R
-		pub fn set_account_id(
-			origin: OriginFor<T>,
-			#[pallet::compact] index: RegistrarIndex,
-			new: T::AccountId,
-		) -> DispatchResultWithPostInfo {
-			let who = ensure_signed(origin)?;
-
-			let registrars = <Registrars<T>>::mutate(|rs| -> Result<usize, DispatchError> {
-				rs.get_mut(index as usize)
-					.and_then(|x| x.as_mut())
-					.and_then(|r| {
-						if r.account == who {
-							r.account = new;
-							Some(())
-						} else {
-							None
-						}
-					})
-					.ok_or_else(|| DispatchError::from(Error::<T>::InvalidIndex))?;
-				Ok(rs.len())
-			})?;
-			Ok(Some(T::WeightInfo::set_account_id(registrars as u32)).into()) // R
-		}
-
-		/// Set the field information for a registrar.
-		///
-		/// The dispatch origin for this call must be _Signed_ and the sender must be the account
-		/// of the registrar whose index is `index`.
-		///
-		/// - `index`: the index of the registrar whose fee is to be set.
-		/// - `fields`: the fields that the registrar concerns themselves with.
-		///
-		/// # <weight>
-		/// - `O(R)`.
-		/// - One storage mutation `O(R)`.
-		/// - Benchmark: 7.464 + R * 0.325 µs (min squares analysis)
-		/// # </weight>
-		#[pallet::weight(T::WeightInfo::set_fields(T::MaxRegistrars::get()))] // R
-		pub fn set_fields(
-			origin: OriginFor<T>,
-			#[pallet::compact] index: RegistrarIndex,
-			fields: IdentityFields,
-		) -> DispatchResultWithPostInfo {
-			let who = ensure_signed(origin)?;
-
-			let registrars = <Registrars<T>>::mutate(|rs| -> Result<usize, DispatchError> {
-				rs.get_mut(index as usize)
-					.and_then(|x| x.as_mut())
-					.and_then(|r| {
-						if r.account == who {
-							r.fields = fields;
-							Some(())
-						} else {
-							None
-						}
-					})
-					.ok_or_else(|| DispatchError::from(Error::<T>::InvalidIndex))?;
-				Ok(rs.len())
-			})?;
-			Ok(Some(T::WeightInfo::set_fields(
-				registrars as u32, // R
-			))
-			.into())
-		}
-
-		/// Provide a judgement for an account's identity.
-		///
-		/// The dispatch origin for this call must be _Signed_ and the sender must be the account
-		/// of the registrar whose index is `reg_index`.
-		///
-		/// - `reg_index`: the index of the registrar whose judgement is being made.
-		/// - `target`: the account whose identity the judgement is upon. This must be an account
-		///   with a registered identity.
-		/// - `judgement`: the judgement of the registrar of index `reg_index` about `target`.
-		///
-		/// Emits `JudgementGiven` if successful.
-		///
-		/// # <weight>
-		/// - `O(R + X)`.
-		/// - One balance-transfer operation.
-		/// - Up to one account-lookup operation.
-		/// - Storage: 1 read `O(R)`, 1 mutate `O(R + X)`.
-		/// - One event.
-		/// # </weight>
-		#[pallet::weight(T::WeightInfo::provide_judgement(
-			T::MaxRegistrars::get().into(), // R
-			T::MaxAdditionalFields::get().into(), // X
-		))]
-		pub fn provide_judgement(
-			origin: OriginFor<T>,
-			#[pallet::compact] reg_index: RegistrarIndex,
-			target: <T::Lookup as StaticLookup>::Source,
-			judgement: Judgement<BalanceOf<T>>,
-		) -> DispatchResultWithPostInfo {
-			let sender = ensure_signed(origin)?;
-			let target = T::Lookup::lookup(target)?;
-			ensure!(!judgement.has_deposit(), Error::<T>::InvalidJudgement);
-			<Registrars<T>>::get()
-				.get(reg_index as usize)
-				.and_then(Option::as_ref)
-				.and_then(|r| if r.account == sender { Some(r) } else { None })
-				.ok_or(Error::<T>::InvalidIndex)?;
-			let mut id = <IdentityOf<T>>::get(&target).ok_or(Error::<T>::InvalidTarget)?;
-
-			let item = (reg_index, judgement);
-			match id.judgements.binary_search_by_key(&reg_index, |x| x.0) {
-				Ok(position) => {
-					if let Judgement::FeePaid(fee) = id.judgements[position].1 {
-						let _ = T::Currency::repatriate_reserved(
-							&target,
-							&sender,
-							fee,
-							BalanceStatus::Free,
-						);
-					}
-					id.judgements[position] = item
-				},
-				Err(position) => id
-					.judgements
-					.try_insert(position, item)
-					.map_err(|_| Error::<T>::TooManyRegistrars)?,
-			}
-
-			let judgements = id.judgements.len();
-			let extra_fields = id.info.additional.len();
-			<IdentityOf<T>>::insert(&target, id);
-			Self::deposit_event(Event::JudgementGiven { target, registrar_index: reg_index });
-
-			Ok(Some(T::WeightInfo::provide_judgement(judgements as u32, extra_fields as u32))
-				.into())
-		}
-
-		/// Remove an account's identity and sub-account information and slash the deposits.
-		///
-		/// Payment: Reserved balances from `set_subs` and `set_identity` are slashed and handled by
-		/// `Slash`. Verification request deposits are not returned; they should be cancelled
-		/// manually using `cancel_request`.
-		///
-		/// The dispatch origin for this call must match `T::ForceOrigin`.
-		///
-		/// - `target`: the account whose identity the judgement is upon. This must be an account
-		///   with a registered identity.
-		///
-		/// Emits `IdentityKilled` if successful.
-		///
-		/// # <weight>
-		/// - `O(R + S + X)`.
-		/// - One balance-reserve operation.
-		/// - `S + 2` storage mutations.
-		/// - One event.
-		/// # </weight>
-		#[pallet::weight(T::WeightInfo::kill_identity(
-			T::MaxRegistrars::get().into(), // R
-			T::MaxSubAccounts::get().into(), // S
-			T::MaxAdditionalFields::get().into(), // X
-		))]
-		pub fn kill_identity(
-			origin: OriginFor<T>,
-			target: <T::Lookup as StaticLookup>::Source,
-		) -> DispatchResultWithPostInfo {
-			T::ForceOrigin::ensure_origin(origin)?;
-
-			// Figure out who we're meant to be clearing.
-			let target = T::Lookup::lookup(target)?;
-			// Grab their deposit (and check that they have one).
-			let (subs_deposit, sub_ids) = <SubsOf<T>>::take(&target);
-			let id = <IdentityOf<T>>::take(&target).ok_or(Error::<T>::NotNamed)?;
-			let deposit = id.total_deposit() + subs_deposit;
-			for sub in sub_ids.iter() {
-				<SuperOf<T>>::remove(sub);
-			}
-			// Slash their deposit from them.
-			T::Slashed::on_unbalanced(T::Currency::slash_reserved(&target, deposit).0);
-
-			Self::deposit_event(Event::IdentityKilled { who: target, deposit });
-
-			Ok(Some(T::WeightInfo::kill_identity(
-				id.judgements.len() as u32,      // R
-				sub_ids.len() as u32,            // S
-				id.info.additional.len() as u32, // X
-			))
-			.into())
-		}
-
-		/// Add the given account to the sender's subs.
-		///
-		/// Payment: Balance reserved by a previous `set_subs` call for one sub will be repatriated
-		/// to the sender.
-		///
-		/// The dispatch origin for this call must be _Signed_ and the sender must have a registered
-		/// sub identity of `sub`.
-		#[pallet::weight(T::WeightInfo::add_sub(T::MaxSubAccounts::get()))]
-		pub fn add_sub(
-			origin: OriginFor<T>,
-			sub: <T::Lookup as StaticLookup>::Source,
-			data: Data,
-		) -> DispatchResult {
-			let sender = ensure_signed(origin)?;
-			let sub = T::Lookup::lookup(sub)?;
-			ensure!(IdentityOf::<T>::contains_key(&sender), Error::<T>::NoIdentity);
-
-			// Check if it's already claimed as sub-identity.
-			ensure!(!SuperOf::<T>::contains_key(&sub), Error::<T>::AlreadyClaimed);
-
-			SubsOf::<T>::try_mutate(&sender, |(ref mut subs_deposit, ref mut sub_ids)| {
-				// Ensure there is space and that the deposit is paid.
-				ensure!(
-					sub_ids.len() < T::MaxSubAccounts::get() as usize,
-					Error::<T>::TooManySubAccounts
-				);
-				let deposit = T::SubAccountDeposit::get();
-				T::Currency::reserve(&sender, deposit)?;
-
-				SuperOf::<T>::insert(&sub, (sender.clone(), data));
-				sub_ids.try_push(sub.clone()).expect("sub ids length checked above; qed");
-				*subs_deposit = subs_deposit.saturating_add(deposit);
-
-				Self::deposit_event(Event::SubIdentityAdded { sub, main: sender.clone(), deposit });
-				Ok(())
-			})
-		}
-
-		/// Alter the associated name of the given sub-account.
-		///
-		/// The dispatch origin for this call must be _Signed_ and the sender must have a registered
-		/// sub identity of `sub`.
-		#[pallet::weight(T::WeightInfo::rename_sub(T::MaxSubAccounts::get()))]
-		pub fn rename_sub(
-			origin: OriginFor<T>,
-			sub: <T::Lookup as StaticLookup>::Source,
-			data: Data,
-		) -> DispatchResult {
-			let sender = ensure_signed(origin)?;
-			let sub = T::Lookup::lookup(sub)?;
-			ensure!(IdentityOf::<T>::contains_key(&sender), Error::<T>::NoIdentity);
-			ensure!(SuperOf::<T>::get(&sub).map_or(false, |x| x.0 == sender), Error::<T>::NotOwned);
-			SuperOf::<T>::insert(&sub, (sender, data));
-			Ok(())
-		}
-
-		/// Remove the given account from the sender's subs.
-		///
-		/// Payment: Balance reserved by a previous `set_subs` call for one sub will be repatriated
-		/// to the sender.
-		///
-		/// The dispatch origin for this call must be _Signed_ and the sender must have a registered
-		/// sub identity of `sub`.
-		#[pallet::weight(T::WeightInfo::remove_sub(T::MaxSubAccounts::get()))]
-		pub fn remove_sub(
-			origin: OriginFor<T>,
-			sub: <T::Lookup as StaticLookup>::Source,
-		) -> DispatchResult {
-			let sender = ensure_signed(origin)?;
-			ensure!(IdentityOf::<T>::contains_key(&sender), Error::<T>::NoIdentity);
-			let sub = T::Lookup::lookup(sub)?;
-			let (sup, _) = SuperOf::<T>::get(&sub).ok_or(Error::<T>::NotSub)?;
-			ensure!(sup == sender, Error::<T>::NotOwned);
-			SuperOf::<T>::remove(&sub);
-			SubsOf::<T>::mutate(&sup, |(ref mut subs_deposit, ref mut sub_ids)| {
-				sub_ids.retain(|x| x != &sub);
-				let deposit = T::SubAccountDeposit::get().min(*subs_deposit);
-				*subs_deposit -= deposit;
-				let err_amount = T::Currency::unreserve(&sender, deposit);
-				debug_assert!(err_amount.is_zero());
-				Self::deposit_event(Event::SubIdentityRemoved { sub, main: sender, deposit });
-			});
-			Ok(())
-		}
-
-		/// Remove the sender as a sub-account.
-		///
-		/// Payment: Balance reserved by a previous `set_subs` call for one sub will be repatriated
-		/// to the sender (*not* the original depositor).
-		///
-		/// The dispatch origin for this call must be _Signed_ and the sender must have a registered
-		/// super-identity.
-		///
-		/// NOTE: This should not normally be used, but is provided in the case that the non-
-		/// controller of an account is maliciously registered as a sub-account.
-		#[pallet::weight(T::WeightInfo::quit_sub(T::MaxSubAccounts::get()))]
-		pub fn quit_sub(origin: OriginFor<T>) -> DispatchResult {
-			let sender = ensure_signed(origin)?;
-			let (sup, _) = SuperOf::<T>::take(&sender).ok_or(Error::<T>::NotSub)?;
-			SubsOf::<T>::mutate(&sup, |(ref mut subs_deposit, ref mut sub_ids)| {
-				sub_ids.retain(|x| x != &sender);
-				let deposit = T::SubAccountDeposit::get().min(*subs_deposit);
-				*subs_deposit -= deposit;
-				let _ =
-					T::Currency::repatriate_reserved(&sup, &sender, deposit, BalanceStatus::Free);
-				Self::deposit_event(Event::SubIdentityRevoked {
-					sub: sender,
-					main: sup.clone(),
-					deposit,
-				});
-			});
-			Ok(())
-		}
-
-
-	}
-
-
-
-
-
-
-
+    }
 }
 
-
-
-
-
-impl<T: Config> Pallet<T> {
-
-
-	pub fn test1(who: Vec<u8>) -> Vec<u8> {
-        who
-    }
-
-	/// Get the subs of an account.
-	pub fn subs(who: &T::AccountId) -> Vec<(T::AccountId, Data)> {
-		SubsOf::<T>::get(who)
-			.1
-			.into_iter()
-			.filter_map(|a| SuperOf::<T>::get(&a).map(|x| (a, x.1)))
-			.collect()
-	}
-
-/*
-	pub fn get_default_identity() -> IdentityInfo<T::MaxAdditionalFields> {
-
-        let add: frame_support::traits::BoundedVec<_, T::MaxAdditionalFields> = vec![
-                    (
-                        Data::Raw(b"number".to_vec().try_into().unwrap()),
-                        Data::Raw(b"10".to_vec().try_into().unwrap())
-                    ),
-                    (
-                        Data::Raw(b"text".to_vec().try_into().unwrap()),
-                        Data::Raw(b"10".to_vec().try_into().unwrap())
-                    ),
-                ]
-                .try_into()
-                .unwrap();
-
-            
-    let id = IdentityInfo {
-        display: Data::Raw(b"ten".to_vec().try_into().unwrap()),
-        legal: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-        image: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-        web: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-        riot: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-//        email: Data::Raw(email.try_into().unwrap()),
-        email: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-        twitter: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-        pgp_fingerprint: None,
-        additional: add
-    };
-
-
-    id
-
-    }
-*/
-	pub fn update_email_password(email: Vec<u8>, password: Vec<u8>,id: IdentityInfoSel<T::MaxAdditionalFields > ) -> IdentityInfoSel<T::MaxAdditionalFields> {
-     //10u32.encode().try_into().unwrap();
-     id
-     }
-}
