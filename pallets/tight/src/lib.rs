@@ -13,7 +13,7 @@ pub mod pallet {
 	use sp_std::vec::Vec; // Step 3.1 will include this in `Cargo.toml`
 
 	#[pallet::config]  // <-- Step 2. code block will replace this.
-	pub trait Config: frame_system::Config + pallet_balances::Config + orml_nft::Config  + pallet_identitysel::Config  {
+	pub trait Config: frame_system::Config + pallet_balances::Config + orml_nft::Config  + pallet_studentid::Config  {
 
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -250,11 +250,11 @@ pub mod pallet {
 
 			let who = ensure_signed(origin)?;
 			// let res = orml_nft::Pallet::<T>::create_class(&who,vec![1],() as <T as orml_nft::Config>::ClassData);
-//             let xx : BoundedVec<_,  pallet_identitysel::Pallet::<T>::Config::MaxEmailsize> = metadata.clone().try_into().unwrap();
+//             let xx : BoundedVec<_,  pallet_studentid::Pallet::<T>::Config::MaxEmailsize> = metadata.clone().try_into().unwrap();
 
-			let res1 = pallet_identitysel::Pallet::<T>::identity(who.clone());
+			let res1 = pallet_studentid::Pallet::<T>::identity(who.clone());
 
-			//let res1 = pallet_identitysel::MaxEmailsize;
+			//let res1 = pallet_studentid::MaxEmailsize;
             //IdentityOf
 
 			Self::deposit_event(Event::TokenIssuedBy(who));

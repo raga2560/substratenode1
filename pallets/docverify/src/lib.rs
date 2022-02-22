@@ -13,14 +13,14 @@ mod tests;
 pub mod pallet {
 	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
-use sp_core::{Pair, Public};
+//use sp_core::{Pair, Public};
 use sp_runtime::traits::{IdentifyAccount, SignedExtension, Verify };
 use sp_runtime::{ MultiSignature };
-//	use pallet_identitysel::*;
+//	use pallet_studentid::*;
 	use sp_std::vec::Vec; // Step 3.1 will include this in `Cargo.toml`
 
 	#[pallet::config]  // <-- Step 2. code block will replace this.
-	pub trait Config: frame_system::Config + pallet_balances::Config + pallet_identitysel::Config  {
+	pub trait Config: frame_system::Config + pallet_balances::Config + pallet_studentid::Config  {
 
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
@@ -302,20 +302,20 @@ pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::Account
                     metadata: Vec<u8> , 
                     data: () ) -> DispatchResult{
             let service: Vec<u8> = b"moodle".to_vec();
-			let id = pallet_identitysel::Pallet::<T>::check_web3access_sel18(origin.clone(), service);
+			let id = pallet_studentid::Pallet::<T>::check_web3access_sel18(origin.clone(), service);
 
 			let who = ensure_signed(origin.clone())?;
-			//let id = pallet_identitysel::Pallet::<T>::set_account_id(origin, 1, who.clone());
+			//let id = pallet_studentid::Pallet::<T>::set_account_id(origin, 1, who.clone());
 			// let res = orml_nft::Pallet::<T>::create_class(&who,vec![1],() as <T as orml_nft::Config>::ClassData);
-//             let xx : BoundedVec<_,  pallet_identitysel::Pallet::<T>::Config::MaxEmailsize> = metadata.clone().try_into().unwrap();
+//             let xx : BoundedVec<_,  pallet_studentid::Pallet::<T>::Config::MaxEmailsize> = metadata.clone().try_into().unwrap();
 
-			let id = pallet_identitysel::Pallet::<T>::identity(who.clone());
+			let id = pallet_studentid::Pallet::<T>::identity(who.clone());
 
  //           id.accountId =  who.clone();
-//            <pallet_identitysel::Pallet::<T> as pallet_identitysel::Pallet::<T>::Config>::Identity1Of::insert(&who, id);
+//            <pallet_studentid::Pallet::<T> as pallet_studentid::Pallet::<T>::Config>::Identity1Of::insert(&who, id);
 
 
-			//let res1 = pallet_identitysel::MaxEmailsize;
+			//let res1 = pallet_studentid::MaxEmailsize;
             //IdentityOf
 
 			Self::deposit_event(Event::TokenIssuedBy(who));

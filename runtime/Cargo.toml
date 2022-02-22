@@ -12,7 +12,7 @@ repository = 'https://github.com/substrate-developer-hub/substrate-node-template
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
 
-[dependencies.pallet-identitysel]
+[dependencies.pallet-studentid]
 default-features = false
 path = '../pallets/identitysel'
 version = '4.0.0-dev'                  
@@ -265,7 +265,7 @@ std = [
     'orml-traits/std',
     'pallet-balances/std',
     'pallet-nicks/std',
-    'pallet-identitysel/std',
+    'pallet-studentid/std',
     'pallet-docverify/std',
     'pallet-grandpa/std',
     'pallet-randomness-collective-flip/std',

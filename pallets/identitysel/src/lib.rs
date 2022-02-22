@@ -54,7 +54,6 @@ mod benchmarking;
 #[cfg(test)]
 mod tests;
 mod types;
-pub mod weights;
 
 use codec::{Decode, Encode, MaxEncodedLen};
 
@@ -72,7 +71,6 @@ use sp_runtime::{RuntimeDebug,DispatchError };
 use sp_std::prelude::*;
 use scale_info::TypeInfo;
 
-pub use weights::WeightInfo;
 use sp_std::{
     fmt::Debug,
     prelude::*,
@@ -80,8 +78,8 @@ use sp_std::{
 
 pub use pallet::*;
 pub use types::{
-	Data, IdentityField, IdentityFields, IdentityInfo, IdentityInfoSel, Judgement, RegistrarIndex, RegistrarInfo,
-	Registration, RegistrationSel
+	Data, IdentityField, IdentityFields,  IdentityInfoSel,  RegistrarIndex, 
+	 RegistrationSel
 };
 
 type BalanceOf<T> =
@@ -162,8 +160,6 @@ pub mod pallet {
 		/// The origin which may add or remove registrars. Root can always do this.
 		type RegistrarOrigin: EnsureOrigin<Self::Origin>;
 
-		/// Weight information for extrinsics in this pallet.
-		type WeightInfo: WeightInfo;
 
 //	 type AccountId: frame_system::Config::AccountId;
 
@@ -201,7 +197,8 @@ pub mod pallet {
 	pub type EmailId<T: Config> =
 		StorageMap<_, Twox64Concat,  T::AccountId, Email<T>>;
 
-	/// Information that is pertinent to identify the entity behind an account.
+
+    /// Information that is pertinent to identify the entity behind an account.
 	///
 	/// TWOX-NOTE: OK ― `AccountId` is a secure hash.
 	#[pallet::storage]
@@ -210,9 +207,10 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		T::AccountId,
-		Registration<BalanceOf<T>, T::MaxRegistrars, T::MaxAdditionalFields>,
+		RegistrationSel<BalanceOf<T>, T::AccountId, T::MaxAdditionalFields>,
 		OptionQuery,
 	>;
+    
 
 	#[pallet::storage]
 	#[pallet::getter(fn identity1)]
@@ -220,52 +218,11 @@ pub mod pallet {
 		_,
 		Twox64Concat,
 		BoundedVec<u8, T::MaxEmailsize> ,
-		RegistrationSel<BalanceOf<T>, T::AccountId, T::MaxRegistrars, T::MaxAdditionalFields>,
+		RegistrationSel<BalanceOf<T>, T::AccountId,  T::MaxAdditionalFields>,
 		OptionQuery,
 	>;
 
-	/// The super-identity of an alternative "sub" identity together with its name, within that
-	/// context. If the account is not some other account's sub-identity, then just `None`.
-	#[pallet::storage]
-	#[pallet::getter(fn super_of)]
-	pub(super) type SuperOf<T: Config> =
-		StorageMap<_, Blake2_128Concat, T::AccountId, (T::AccountId, Data), OptionQuery>;
 
-	/// Alternative "sub" identities of this account.
-	///
-	/// The first item is the deposit, the second is a vector of the accounts.
-	///
-	/// TWOX-NOTE: OK ― `AccountId` is a secure hash.
-	#[pallet::storage]
-	#[pallet::getter(fn subs_of)]
-	pub(super) type SubsOf<T: Config> = StorageMap<
-		_,
-		Twox64Concat,
-		T::AccountId,
-		(BalanceOf<T>, BoundedVec<T::AccountId, T::MaxSubAccounts>),
-		ValueQuery,
-	>;
-
-	/// The set of registrars. Not expected to get very big as can only be added through a
-	/// special origin (likely a council motion).
-	///
-	/// The index into this can be cast to `RegistrarIndex` to get a valid value.
-	#[pallet::storage]
-	#[pallet::getter(fn registrars)]
-	pub(super) type Registrars<T: Config> = StorageValue<
-		_,
-		BoundedVec<Option<RegistrarInfo<BalanceOf<T>, T::AccountId>>, T::MaxRegistrars>,
-		ValueQuery,
-	>;
-
-
-	#[pallet::storage]
-	#[pallet::getter(fn useridentities)]
-	pub(super) type Useridentities<T: Config> = StorageValue<
-		_,
-		BoundedVec<Option  <IdentityInfo<T::MaxAdditionalFields>>, T::MaxUseridentities>,
-		ValueQuery,
-	>;
 
 
 
@@ -300,25 +257,13 @@ pub mod pallet {
 		/// No identity found.
 		NoIdentity,
 		/// Sticky judgement.
-		StickyJudgement,
-		/// Judgement given.
-		JudgementGiven,
-		/// Invalid judgement.
-		InvalidJudgement,
-		/// The index is invalid.
 		InvalidIndex,
 		/// The target is invalid.
 		InvalidTarget,
 		/// Too many additional fields.
 		TooManyFields,
 		/// Maximum amount of registrars reached. Cannot add any more.
-		TooManyRegistrars,
-		/// Account ID is already named.
 		AlreadyClaimed,
-		/// Sender is not a sub-account.
-		NotSub,
-		/// Sub-account isn't owned by sender.
-		NotOwned,
 	}
 
 	#[pallet::event]
@@ -346,12 +291,6 @@ pub mod pallet {
 		IdentityCleared { who: T::AccountId, deposit: BalanceOf<T> },
 		/// A name was removed and the given balance slashed.
 		IdentityKilled { who: T::AccountId, deposit: BalanceOf<T> },
-		/// A judgement was asked from a registrar.
-		JudgementRequested { who: T::AccountId, registrar_index: RegistrarIndex },
-		/// A judgement request was retracted.
-		JudgementUnrequested { who: T::AccountId, registrar_index: RegistrarIndex },
-		/// A judgement was given by a registrar.
-		JudgementGiven { target: T::AccountId, registrar_index: RegistrarIndex },
         
 		/// A useridentity was added.
 		UseridentityAdded { useridentity_index: UseridentityIndex },
@@ -380,14 +319,13 @@ pub mod pallet {
 		) -> DispatchResult {
 			let sender = ensure_signed(origin)?;
 
-         //   let _x2 = Pallet::<T>::test1(email.clone());
             let emailx : BoundedVec<_, T::MaxEmailsize> = email.clone().try_into().unwrap();
         
             ensure!(!Identity1Of::<T>::contains_key(&emailx), Error::<T>::IdentityAlreadyClaimed);
 
 
 
-              let add: BoundedVec<_, T::MaxAdditionalFields> = vec![
+            let add: BoundedVec<_, T::MaxAdditionalFields> = vec![
                     (
                         Data::Raw(b"number".to_vec().try_into().unwrap()),
                         Data::Raw(10u32.encode().try_into().unwrap())
@@ -418,7 +356,6 @@ pub mod pallet {
         let reg = RegistrationSel {
                     accountId:sender, 
                     info: info,
-                    judgements: BoundedVec::default(),
                     deposit: Zero::zero(),
         };
 
@@ -444,7 +381,6 @@ pub mod pallet {
 
             let info = id.info;
         
-            //let r = blake2_128(password.clone()).unwrap();
 
             let passtocheck = Data::BlakeTwo256(blake2_256(&password.clone()));
 
@@ -476,7 +412,6 @@ pub mod pallet {
             let reg = RegistrationSel {
                     accountId: sender,
                     info: info,
-                    judgements: BoundedVec::default(),
                     deposit: Zero::zero(),
 
             };
@@ -510,7 +445,6 @@ pub mod pallet {
             let reg = RegistrationSel {
                     accountId: sender,
                     info: info,
-                    judgements: BoundedVec::default(),
                     deposit: Zero::zero(),
             };
 
@@ -557,7 +491,6 @@ pub mod pallet {
             let reg = RegistrationSel {
                     accountId: sender.clone(),
                     info: info,
-                    judgements: BoundedVec::default(),
                     deposit: Zero::zero(),
             };
 
@@ -615,7 +548,6 @@ pub mod pallet {
             let reg = RegistrationSel {
                     accountId: id.accountId,
                     info: info,
-                    judgements: BoundedVec::default(),
                     deposit: Zero::zero(),
             };
 

@@ -18,7 +18,7 @@
 // Tests for Identity Pallet
 
 use super::*;
-use crate as pallet_identitysel;
+use crate as pallet_studentid;
 
 use codec::{Decode, Encode};
 use frame_support::{
@@ -43,7 +43,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		Balances: pallet_balances::{Pallet, Call, Storage, Config<T>, Event<T>},
-		Identity: pallet_identitysel::{Pallet, Call, Storage, Event<T>},
+		Identity: pallet_studentid::{Pallet, Call, Storage, Event<T>},
 	}
 );
 
@@ -111,7 +111,7 @@ ord_parameter_types! {
 }
 //type EnsureOneOrRoot = EnsureOneOf<EnsureRoot<u64>, EnsureSignedBy<One, u64>>;
 //type EnsureTwoOrRoot = EnsureOneOf<EnsureRoot<u64>, EnsureSignedBy<Two, u64>>;
-impl pallet_identitysel::Config for Test {
+impl pallet_studentid::Config for Test {
 	type Event = Event;
 	type Currency = Balances;
 	type Slashed = ();
@@ -128,7 +128,6 @@ impl pallet_identitysel::Config for Test {
 
 	type RegistrarOrigin = frame_system::EnsureRoot<Self::AccountId> ;
 	type ForceOrigin = frame_system::EnsureRoot<Self::AccountId>  ;
-	type WeightInfo = ();
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
@@ -141,21 +140,6 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	t.into()
 }
 
-fn ten() -> IdentityInfo<MaxAdditionalFields> {
-	IdentityInfo {
-		display: Data::Raw(b"ten".to_vec().try_into().unwrap()),
-		legal: Data::Raw(b"The Right Ordinal Ten, Esq.".to_vec().try_into().unwrap()),
-		..Default::default()
-	}
-}
-
-fn twenty() -> IdentityInfo<MaxAdditionalFields> {
-	IdentityInfo {
-		display: Data::Raw(b"twenty".to_vec().try_into().unwrap()),
-		legal: Data::Raw(b"The Right Ordinal Twenty, Esq.".to_vec().try_into().unwrap()),
-		..Default::default()
-	}
-}
 
 #[test]
 fn userregistration_should_work_sela() {

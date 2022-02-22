@@ -3576,12 +3576,12 @@ dependencies = [
  "pallet-crowd",
  "pallet-docverify",
  "pallet-grandpa",
- "pallet-identitysel",
  "pallet-kitty",
  "pallet-loose",
  "pallet-nicks",
  "pallet-randomness-collective-flip",
  "pallet-rewardcoin",
+ "pallet-studentid",
  "pallet-sudo",
  "pallet-template",
  "pallet-timestamp",
@@ -3870,7 +3870,7 @@ dependencies = [
  "frame-system",
  "orml-nft",
  "pallet-balances",
- "pallet-identitysel",
+ "pallet-studentid",
  "parity-scale-codec",
  "scale-info",
  "serde",
@@ -3900,23 +3900,6 @@ dependencies = [
  "sp-runtime",
  "sp-session",
  "sp-staking",
- "sp-std",
-]
-
-[[package]]
-name = "pallet-identitysel"
-version = "4.0.0-dev"
-dependencies = [
- "enumflags2",
- "frame-benchmarking",
- "frame-support",
- "frame-system",
- "pallet-balances",
- "parity-scale-codec",
- "scale-info",
- "sp-core",
- "sp-io",
- "sp-runtime",
  "sp-std",
 ]
 
@@ -4021,6 +4004,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "pallet-studentid"
+version = "4.0.0-dev"
+dependencies = [
+ "enumflags2",
+ "frame-benchmarking",
+ "frame-support",
+ "frame-system",
+ "pallet-balances",
+ "parity-scale-codec",
+ "scale-info",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
 name = "pallet-sudo"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech/substrate.git?tag=monthly-2021-10#bf9683eee40f82cc4e01a05cd375b0e8bba3c8ef"
@@ -4060,7 +4060,7 @@ dependencies = [
  "frame-system",
  "orml-nft",
  "pallet-balances",
- "pallet-identitysel",
+ "pallet-studentid",
  "parity-scale-codec",
  "scale-info",
  "serde",

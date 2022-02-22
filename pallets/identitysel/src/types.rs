@@ -1,19 +1,3 @@
-// This file is part of Substrate.
-
-// Copyright (C) 2021 Parity Technologies (UK) Ltd.
-// SPDX-License-Identifier: Apache-2.0
-
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-// 	http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
 
 use super::*;
 use codec::{Decode, Encode, MaxEncodedLen};
@@ -182,56 +166,6 @@ impl Default for Data {
 /// An identifier for a single name registrar/identity verification service.
 pub type RegistrarIndex = u32;
 
-/// An attestation of a registrar over how accurate some `IdentityInfo` is in describing an account.
-///
-/// NOTE: Registrars may pay little attention to some fields. Registrars may want to make clear
-/// which fields their attestation is relevant for by off-chain means.
-#[derive(Copy, Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
-pub enum Judgement<Balance: Encode + Decode + MaxEncodedLen + Copy + Clone + Debug + Eq + PartialEq>
-{
-	/// The default value; no opinion is held.
-	Unknown,
-	/// No judgement is yet in place, but a deposit is reserved as payment for providing one.
-	FeePaid(Balance),
-	/// The data appears to be reasonably acceptable in terms of its accuracy, however no in depth
-	/// checks (such as in-person meetings or formal KYC) have been conducted.
-	Reasonable,
-	/// The target is known directly by the registrar and the registrar can fully attest to the
-	/// the data's accuracy.
-	KnownGood,
-	/// The data was once good but is currently out of date. There is no malicious intent in the
-	/// inaccuracy. This judgement can be removed through updating the data.
-	OutOfDate,
-	/// The data is imprecise or of sufficiently low-quality to be problematic. It is not
-	/// indicative of malicious intent. This judgement can be removed through updating the data.
-	LowQuality,
-	/// The data is erroneous. This may be indicative of malicious intent. This cannot be removed
-	/// except by the registrar.
-	Erroneous,
-}
-
-impl<Balance: Encode + Decode + MaxEncodedLen + Copy + Clone + Debug + Eq + PartialEq>
-	Judgement<Balance>
-{
-	/// Returns `true` if this judgement is indicative of a deposit being currently held. This means
-	/// it should not be cleared or replaced except by an operation which utilizes the deposit.
-	pub(crate) fn has_deposit(&self) -> bool {
-		match self {
-			Judgement::FeePaid(_) => true,
-			_ => false,
-		}
-	}
-
-	/// Returns `true` if this judgement is one that should not be generally be replaced outside
-	/// of specialized handlers. Examples include "malicious" judgements and deposit-holding
-	/// judgements.
-	pub(crate) fn is_sticky(&self) -> bool {
-		match self {
-			Judgement::FeePaid(_) | Judgement::Erroneous => true,
-			_ => false,
-		}
-	}
-}
 
 /// The fields that we use to identify the owner of an account with. Each corresponds to a field
 /// in the `IdentityInfo` struct.
@@ -281,61 +215,6 @@ impl TypeInfo for IdentityFields {
 	}
 }
 
-/// Information concerning the identity of the controller of an account.
-///
-/// NOTE: This should be stored at the end of the storage item to facilitate the addition of extra
-/// fields in a backwards compatible way through a specialized `Decode` impl.
-#[derive(
-	CloneNoBound, Encode, Decode, Eq, MaxEncodedLen, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo,
-)]
-#[codec(mel_bound(FieldLimit: Get<u32>))]
-#[cfg_attr(test, derive(frame_support::DefaultNoBound))]
-#[scale_info(skip_type_params(FieldLimit))]
-pub struct IdentityInfo<FieldLimit: Get<u32>> {
-	/// Additional fields of the identity that are not catered for with the struct's explicit
-	/// fields.
-	pub additional: BoundedVec<(Data, Data), FieldLimit>,
-
-	/// A reasonable display name for the controller of the account. This should be whatever it is
-	/// that it is typically known as and should not be confusable with other entities, given
-	/// reasonable context.
-	///
-	/// Stored as UTF-8.
-	pub display: Data,
-
-	/// The full legal name in the local jurisdiction of the entity. This might be a bit
-	/// long-winded.
-	///
-	/// Stored as UTF-8.
-	pub legal: Data,
-
-	/// A representative website held by the controller of the account.
-	///
-	/// NOTE: `https://` is automatically prepended.
-	///
-	/// Stored as UTF-8.
-	pub web: Data,
-
-	/// The Riot/Matrix handle held by the controller of the account.
-	///
-	/// Stored as UTF-8.
-	pub riot: Data,
-
-	/// The email address of the controller of the account.
-	///
-	/// Stored as UTF-8.
-	pub email: Data,
-
-	/// The PGP/GPG public key of the controller of the account.
-	pub pgp_fingerprint: Option<[u8; 20]>,
-
-	/// A graphic image representing the controller of the account. Should be a company,
-	/// organization or project logo or a headshot in the case of a human.
-	pub image: Data,
-
-	/// The Twitter identity. The leading `@` character may be elided.
-	pub twitter: Data,
-}
 
 
 #[derive(
@@ -394,39 +273,6 @@ pub struct IdentityInfoSel<FieldLimit: Get<u32>> {
 
 
 
-/// Information concerning the identity of the controller of an account.
-///
-/// NOTE: This is stored separately primarily to facilitate the addition of extra fields in a
-/// backwards compatible way through a specialized `Decode` impl.
-#[derive(
-	CloneNoBound, Encode, Eq, MaxEncodedLen, PartialEqNoBound, RuntimeDebugNoBound, TypeInfo,
-)]
-#[codec(mel_bound(
-	Balance: Encode + Decode + MaxEncodedLen + Copy + Clone + Debug + Eq + PartialEq + Zero + Add,
-	MaxJudgements: Get<u32>,
-	MaxAdditionalFields: Get<u32>,
-))]
-#[scale_info(skip_type_params(MaxJudgements, MaxAdditionalFields))]
-pub struct Registration<
-	Balance: Encode + Decode + MaxEncodedLen + Copy + Clone + Debug + Eq + PartialEq,
-	MaxJudgements: Get<u32>,
-	MaxAdditionalFields: Get<u32>,
-> {
-	/// Judgements from the registrars on this identity. Stored ordered by `RegistrarIndex`. There
-	/// may be only a single judgement from each registrar.
-	pub judgements: BoundedVec<(RegistrarIndex, Judgement<Balance>), MaxJudgements>,
-
-	/// Amount held on deposit for this information.
-	pub deposit: Balance,
-
-	/// Information on the identity.
-	pub info: IdentityInfo<MaxAdditionalFields>,
-}
-
-
-
-/// Information concerning the identity of the controller of an account.
-///
 /// NOTE: This is stored separately primarily to facilitate the addition of extra fields in a
 /// backwards compatible way through a specialized `Decode` impl.
 #[derive(
@@ -435,19 +281,14 @@ pub struct Registration<
 #[codec(mel_bound(
 	Balance: Encode + Decode + MaxEncodedLen + Copy + Clone + Debug + Eq + PartialEq + Zero + Add,
 	AccountId: Encode + Decode + MaxEncodedLen +  Clone + Debug + Eq + PartialEq ,
-	MaxJudgements: Get<u32>,
 	MaxAdditionalFields: Get<u32>,
 ))]
-#[scale_info(skip_type_params(MaxJudgements, MaxAdditionalFields))]
+#[scale_info(skip_type_params( MaxAdditionalFields))]
 pub struct RegistrationSel<
 	Balance: Encode + Decode + MaxEncodedLen + Copy + Clone + Debug + Eq + PartialEq,
 	AccountId: Encode + Decode + MaxEncodedLen + Clone + Debug + Eq + PartialEq,
-	MaxJudgements: Get<u32>,
 	MaxAdditionalFields: Get<u32>,
 > {
-	/// Judgements from the registrars on this identity. Stored ordered by `RegistrarIndex`. There
-	/// may be only a single judgement from each registrar.
-	pub judgements: BoundedVec<(RegistrarIndex, Judgement<Balance>), MaxJudgements>,
 
 	/// Amount held on deposit for this information.
 	pub deposit: Balance,
@@ -466,75 +307,27 @@ pub struct RegistrationSel<
 impl<
 		Balance: Encode + Decode + MaxEncodedLen + Copy + Clone + Debug + Eq + PartialEq + Zero + Add,
 		AccountId: Encode + Decode + MaxEncodedLen + Clone + Debug + Eq + PartialEq ,
-		MaxJudgements: Get<u32>,
 		MaxAdditionalFields: Get<u32>,
-	> RegistrationSel<Balance, AccountId,   MaxJudgements, MaxAdditionalFields>
+	> RegistrationSel<Balance, AccountId,    MaxAdditionalFields>
 {
 	pub(crate) fn total_deposit(&self) -> Balance {
-		self.deposit +
-			self.judgements
-				.iter()
-				.map(|(_, ref j)| if let Judgement::FeePaid(fee) = j { *fee } else { Zero::zero() })
-				.fold(Zero::zero(), |a, i| a + i)
+		self.deposit 
 	}
 }
 
 impl<
 		Balance: Encode + Decode + MaxEncodedLen + Copy + Clone + Debug + Eq + PartialEq,
 		AccountId: Encode + Decode + MaxEncodedLen + Clone + Debug + Eq + PartialEq ,
-		MaxJudgements: Get<u32>,
 		MaxAdditionalFields: Get<u32>,
-	> Decode for RegistrationSel<Balance, AccountId,   MaxJudgements, MaxAdditionalFields>
+	> Decode for RegistrationSel<Balance, AccountId,    MaxAdditionalFields>
 {
 	fn decode<I: codec::Input>(input: &mut I) -> sp_std::result::Result<Self, codec::Error> {
-		let (judgements, deposit, accountId, info) = Decode::decode(&mut AppendZerosInput::new(input))?;
-		Ok(Self { judgements, deposit, accountId, info })
+		let ( deposit, accountId, info) = Decode::decode(&mut AppendZerosInput::new(input))?;
+		Ok(Self {  deposit, accountId, info })
 	}
 }
 
-impl<
-		Balance: Encode + Decode + MaxEncodedLen + Copy + Clone + Debug + Eq + PartialEq + Zero + Add,
-		MaxJudgements: Get<u32>,
-		MaxAdditionalFields: Get<u32>,
-	> Registration<Balance, MaxJudgements, MaxAdditionalFields>
-{
-	pub(crate) fn total_deposit(&self) -> Balance {
-		self.deposit +
-			self.judgements
-				.iter()
-				.map(|(_, ref j)| if let Judgement::FeePaid(fee) = j { *fee } else { Zero::zero() })
-				.fold(Zero::zero(), |a, i| a + i)
-	}
-}
 
-impl<
-		Balance: Encode + Decode + MaxEncodedLen + Copy + Clone + Debug + Eq + PartialEq,
-		MaxJudgements: Get<u32>,
-		MaxAdditionalFields: Get<u32>,
-	> Decode for Registration<Balance, MaxJudgements, MaxAdditionalFields>
-{
-	fn decode<I: codec::Input>(input: &mut I) -> sp_std::result::Result<Self, codec::Error> {
-		let (judgements, deposit, info) = Decode::decode(&mut AppendZerosInput::new(input))?;
-		Ok(Self { judgements, deposit, info })
-	}
-}
-
-/// Information concerning a registrar.
-#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, MaxEncodedLen, TypeInfo)]
-pub struct RegistrarInfo<
-	Balance: Encode + Decode + Clone + Debug + Eq + PartialEq,
-	AccountId: Encode + Decode + Clone + Debug + Eq + PartialEq,
-> {
-	/// The account of the registrar.
-	pub account: AccountId,
-
-	/// Amount required to be given to the registrar for them to provide judgement.
-	pub fee: Balance,
-
-	/// Relevant fields for this registrar. Registrar judgements are limited to attestations on
-	/// these fields.
-	pub fields: IdentityFields,
-}
 
 #[cfg(test)]
 mod tests {

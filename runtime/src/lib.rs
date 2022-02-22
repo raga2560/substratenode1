@@ -362,7 +362,7 @@ ord_parameter_types! {
 type EnsureOneOrRoot = EnsureOneOf<AccountId, EnsureRoot<u64>, EnsureSignedBy<One, u64>>;
 type EnsureTwoOrRoot = EnsureOneOf<AccountId, EnsureRoot<u64>, EnsureSignedBy<Two, u64>>;
 
-impl pallet_identitysel::Config for Runtime {
+impl pallet_studentid::Config for Runtime {
     type Event = Event;
     type Currency = Balances;
     type Slashed = ();
@@ -379,8 +379,6 @@ impl pallet_identitysel::Config for Runtime {
 
     type RegistrarOrigin = frame_system::EnsureRoot<AccountId>; //EnsureOneOrRoot;
     type ForceOrigin = frame_system::EnsureRoot<AccountId>; //EnsureTwoOrRoot;
-    type WeightInfo = ();
-//    type AccountId = <Type as frame_system::Config>::AccountId;
 }
 
 
@@ -471,7 +469,7 @@ construct_runtime!(
 		CrowdModule: pallet_crowd::{Pallet, Call, Storage, Event<T>},
         LooseTemplateModule: pallet_loose::{Pallet, Call, Storage, Event<T>},
 		subkitty: pallet_kitty::{Pallet, Call, Storage, Event<T>},
-        Identity: pallet_identitysel::{Pallet, Call,  Storage, Event<T>},
+        Identity: pallet_studentid::{Pallet, Call,  Storage, Event<T>},
         Docverify: pallet_docverify::{Pallet, Call,  Storage, Event<T>},
 	}
 );

@@ -26,7 +26,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
 		TestingPallet: pallet_docverify::{Pallet, Call, Storage, Event<T>},
-        Identity: pallet_identitysel::{Pallet, Call, Storage, Event<T>},
+        Identity: pallet_studentid::{Pallet, Call, Storage, Event<T>},
         Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
 
 	}
@@ -76,7 +76,7 @@ ord_parameter_types! {
 }
 //type EnsureOneOrRoot = EnsureOneOf<EnsureRoot<u64>, EnsureSignedBy<One, u64>>;
 //type EnsureTwoOrRoot = EnsureOneOf<EnsureRoot<u64>, EnsureSignedBy<Two, u64>>;
-impl pallet_identitysel::Config for Test {
+impl pallet_studentid::Config for Test {
     type Event = Event;
     type Currency = Balances;
     type Slashed = ();
